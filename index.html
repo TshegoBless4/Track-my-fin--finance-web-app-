@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track My Fin - Personal Finance Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Track My Fin</h1>
+        <p class="subtitle">AI-powered personal finance tracker for South Africans</p>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="card">
+                <h3> INCOME</h3>
+                <div class="amount" id="incomeAmount">R0</div>
+            </div>
+            <div class="card">
+                <h3> EXPENSES</h3>
+                <div class="amount" id="expenseAmount">R0</div>
+            </div>
+            <div class="card">
+                <h3>REMAINING</h3>
+                <div class="amount" id="remainingAmount">R0</div>
+            </div>
+        </div>
+
+        <!-- Chart & Breakdown Section -->
+        <div class="section">
+            <h3>Spending Analysis</h3>
+            <div class="chart-breakdown">
+                <div class="chart-container">
+                    <canvas id="categoryChart" width="250" height="250"></canvas>
+                </div>
+                <div class="breakdown" id="breakdownList">
+                    <div class="breakdown-item">
+                        <span class="breakdown-label essential">● Essential</span>
+                        <span class="breakdown-amount" id="essentialAmount">R0</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label lifestyle">● Lifestyle</span>
+                        <span class="breakdown-amount" id="lifestyleAmount">R0</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label financial">● Financial</span>
+                        <span class="breakdown-amount" id="financialAmount">R0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Manual Transaction -->
+        <div class="section">
+            <h3> Add Manual Transaction</h3>
+            <div class="form-row">
+                <input type="text" id="descInput" placeholder="Description (e.g., Checkers, Uber)">
+                <input type="number" id="amountInput" placeholder="Amount">
+                <select id="typeSelect">
+                    <option value="expense">Expense (-)</option>
+                    <option value="income">Income (+)</option>
+                </select>
+                <button onclick="addTransaction()">Add Transaction</button>
+            </div>
+        </div>
+
+        <!-- Upload CSV -->
+        <div class="section">
+            <h3>Upload Bank Statement (CSV)</h3>
+            <div class="form-row">
+                <input type="file" id="csvFile" accept=".csv">
+                <button onclick="uploadCSV()">Process Statement</button>
+            </div>
+            <div class="note">CSV format: Date,Description,Amount (negative for expense, positive for income)</div>
+            <div class="note">Example: 2026-05-10,Checkers Groceries,-845.50</div>
+        </div>
+
+        <!-- Transaction List -->
+        <div class="section">
+            <div class="flex-between">
+                <h3>Transaction History</h3>
+                <button onclick="clearAllData()" class="btn-danger btn-small">Clear All</button>
+            </div>
+            <div id="transactionList" class="transaction-list">
+                <div class="empty-state">No transactions yet. Add one above or upload a CSV.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
