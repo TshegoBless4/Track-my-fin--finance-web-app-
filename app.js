@@ -4,11 +4,26 @@
 // ============================================
 
 // ============================================
-// API CONFIGURATION (OpenRouter)
+// API CONFIGURATION - USING VERCEL PROXY (SAFE)
+// Your API key is stored on Vercel server, NOT in this file
 // ============================================
-const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const API_KEY = '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';
 
+// Determine which API URL to use (local vs production)
+const isLocal = window.location.hostname === 'localhost' || 
+                window.location.hostname === '127.0.0.1' ||
+                window.location.hostname.includes('vercel.app') === false;
+
+// Vercel proxy URL - change 'track-my-fin' to your actual Vercel project name
+const VERCEL_PROXY_URL = 'https://track-my-fin.vercel.app/api/categorize';
+
+// For local development with Vercel CLI, use localhost
+const LOCAL_PROXY_URL = 'http://localhost:3000/api/categorize';
+
+// Use the appropriate URL
+const API_URL = isLocal ? LOCAL_PROXY_URL : VERCEL_PROXY_URL;
+
+// For GitHub Pages, we use the proxy (API key is safe on Vercel server)
+// For local testing, you need to run `vercel dev` to test the proxy locally
 let USE_REAL_API = true;
 
 // ============================================
@@ -22,7 +37,9 @@ function loadData() {
     if (saved) {
         try {
             transactions = JSON.parse(saved);
-        } catch(e) {}
+        } catch(e) {
+            console.error('Failed to load data', e);
+        }
     }
     updateAll();
 }
@@ -32,48 +49,42 @@ function saveData() {
 }
 
 // ============================================
-// AI API CALL WITH CONFIDENCE SCORING
+// AI API CALL - USING VERCEL PROXY (SAFE)
+// API key is stored on Vercel server, never exposed to browser
 // ============================================
 async function categorizeWithAPI(description, amount) {
+    if (!USE_REAL_API) return null;
+    
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_KEY}`,
-                'HTTP-Referer': 'https://trackmyfin.demo',
-                'X-Title': 'Track My Fin'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'deepseek/deepseek-r1:free',
-                messages: [
-                    {
-                        role: 'system',
-                        content: `You are a financial categorizer. Return ONLY a JSON object with "category" and "confidence" (0-1).
-                        
-Category: Essential, Lifestyle, Financial, or Income.
-Confidence: How certain are you? (1.0 = completely certain, 0.5 = unsure, 0.0 = no idea)
-
-Return JSON like: {"category":"Lifestyle","confidence":0.85}`
-                    },
-                    {
-                        role: 'user',
-                        content: `Transaction: "${description}" for R${Math.abs(amount)}`
-                    }
-                ],
-                temperature: 0.1,
-                max_tokens: 60
+                description: description,
+                amount: amount
             })
         });
-
-        if (!response.ok) return null;
+        
+        if (!response.ok) {
+            console.error('Proxy error:', response.status);
+            return null;
+        }
+        
         const data = await response.json();
-        let result = data.choices[0].message.content.trim();
-        result = result.replace(/```json/g, '').replace(/```/g, '');
-        const parsed = JSON.parse(result);
-        return { category: parsed.category, confidence: parsed.confidence || 0.7 };
+        
+        if (data.category) {
+            return { 
+                category: data.category, 
+                confidence: data.confidence || 0.8 
+            };
+        }
+        
+        return null;
         
     } catch (error) {
+        console.error('API Error:', error);
         return null;
     }
 }
@@ -84,18 +95,40 @@ Return JSON like: {"category":"Lifestyle","confidence":0.85}`
 function categorizeWithKeywords(description) {
     const desc = description.toLowerCase();
     
-    if (desc.includes('salary') || desc.includes('deposit')) {
+    // Income keywords
+    if (desc.includes('salary') || desc.includes('deposit') || 
+        desc.includes('income') || desc.includes('wage') ||
+        desc.includes('payment received') || desc.includes('freelance')) {
         return { category: 'Income', confidence: 0.9 };
     }
-    if (desc.includes('checkers') || desc.includes('pick n pay') || desc.includes('shoprite')) {
+    
+    // Essential keywords (South African focused)
+    if (desc.includes('checkers') || desc.includes('pick n pay') || 
+        desc.includes('shoprite') || desc.includes('woolworths') ||
+        desc.includes('grocery') || desc.includes('rent') ||
+        desc.includes('medication') || desc.includes('electricity') ||
+        desc.includes('water') || desc.includes('medical aid') ||
+        desc.includes('school fees') || desc.includes('transport') ||
+        desc.includes('petrol') || desc.includes('fuel')) {
         return { category: 'Essential', confidence: 0.85 };
     }
-    if (desc.includes('fee') || desc.includes('bank') || desc.includes('insurance')) {
+    
+    // Financial keywords (South African banks)
+    if (desc.includes('capitec') || desc.includes('fnb') || 
+        desc.includes('nedbank') || desc.includes('standard bank') ||
+        desc.includes('absa') || desc.includes('bank fee') ||
+        desc.includes('insurance') || desc.includes('loan') ||
+        desc.includes('credit card') || desc.includes('interest')) {
         return { category: 'Financial', confidence: 0.85 };
     }
-    if (desc.includes('payment') || desc.includes('transfer') || desc.includes('mall')) {
+    
+    // Low confidence for ambiguous or mall transactions
+    if (desc.includes('payment') || desc.includes('transfer') || desc.includes('mall') ||
+        desc.includes('online') || desc.includes('shopping')) {
         return { category: 'Lifestyle', confidence: 0.4 };
     }
+    
+    // Default
     return { category: 'Lifestyle', confidence: 0.5 };
 }
 
@@ -104,20 +137,28 @@ function categorizeWithKeywords(description) {
 // ============================================
 function needsReview(confidence, description) {
     const desc = description.toLowerCase();
-    if (desc.includes('payment') || desc.includes('transfer')) {
+    // Always flag ambiguous transactions
+    if (desc.includes('payment') || desc.includes('transfer') || desc.includes('online')) {
         return true;
     }
+    // Flag low confidence
     return confidence < 0.7;
 }
 
 // ============================================
-// MAIN CATEGORIZATION
+// MAIN CATEGORIZATION (API first, fallback second)
 // ============================================
 async function categorizeTransaction(description, amount) {
     let result;
-    if (USE_REAL_API && API_KEY) {
+    
+    // Try API first if enabled
+    if (USE_REAL_API) {
         const apiResult = await categorizeWithAPI(description, amount);
-        result = apiResult || categorizeWithKeywords(description);
+        if (apiResult) {
+            result = apiResult;
+        } else {
+            result = categorizeWithKeywords(description);
+        }
     } else {
         result = categorizeWithKeywords(description);
     }
@@ -146,6 +187,7 @@ async function addTransaction() {
     if (type === 'income' && amount < 0) amount = Math.abs(amount);
     
     const addBtn = event.target;
+    const originalText = addBtn.innerText;
     addBtn.innerText = '🤖 Analyzing...';
     addBtn.disabled = true;
     
@@ -160,13 +202,13 @@ async function addTransaction() {
         confidence: result.confidence,
         needsReview: result.needsReview,
         reviewed: !result.needsReview,
-        source: 'api'
+        source: USE_REAL_API ? 'api' : 'fallback'
     });
     
     saveData();
     updateAll();
     
-    addBtn.innerText = 'Add Transaction';
+    addBtn.innerText = originalText;
     addBtn.disabled = false;
     
     if (result.needsReview) {
@@ -196,6 +238,7 @@ async function uploadCSV() {
         let needsReviewCount = 0;
         
         const uploadBtn = event.target;
+        const originalText = uploadBtn.innerText;
         uploadBtn.innerText = '🤖 Processing...';
         uploadBtn.disabled = true;
         
@@ -221,7 +264,7 @@ async function uploadCSV() {
                         confidence: result.confidence,
                         needsReview: result.needsReview,
                         reviewed: !result.needsReview,
-                        source: 'api'
+                        source: USE_REAL_API ? 'api' : 'fallback'
                     });
                     
                     addedCount++;
@@ -237,12 +280,11 @@ async function uploadCSV() {
         saveData();
         updateAll();
         
-        uploadBtn.innerText = 'Process Statement';
+        uploadBtn.innerText = originalText;
         uploadBtn.disabled = false;
         
-        // Show summary with review count
         if (needsReviewCount > 0) {
-            showToast(`✅ Added ${addedCount} transactions. ${needsReviewCount} need review. Click "Show Pending Reviews" to fix.`, 'warning');
+            showToast(`✅ Added ${addedCount} transactions. ${needsReviewCount} need review.`, 'warning');
             showReviewBanner(needsReviewCount);
         } else {
             showToast(`✅ Added ${addedCount} transactions. All good!`, 'success');
@@ -262,9 +304,16 @@ function showReviewBanner(count) {
         banner = document.createElement('div');
         banner.id = 'reviewBanner';
         banner.style.cssText = `
-            background: #e6b85c; color: #2c2c2a; padding: 12px 20px; 
-            border-radius: 8px; margin-bottom: 20px; 
-            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(230, 184, 92, 0.9);
+            backdrop-filter: blur(10px);
+            color: #2c2c2a;
+            padding: 14px 22px;
+            border-radius: 50px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(255,255,255,0.3);
         `;
         const container = document.querySelector('.container');
         const summaryCards = document.querySelector('.summary-cards');
@@ -273,7 +322,7 @@ function showReviewBanner(count) {
     
     banner.innerHTML = `
         <span>⚠️ ${count} transaction${count > 1 ? 's' : ''} need review (low confidence)</span>
-        <button onclick="showPendingReviews()" style="background:#2c7a6e; padding: 5px 15px;">Review Now</button>
+        <button onclick="showPendingReviews()" style="background:#726772; padding: 8px 18px; border-radius: 40px;">Review Now</button>
     `;
     banner.style.display = 'flex';
 }
@@ -301,37 +350,39 @@ function showPendingReviews() {
         modal.id = 'reviewModal';
         modal.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); display: flex; align-items: center;
+            background: rgba(100, 90, 100, 0.3);
+            backdrop-filter: blur(8px);
+            display: flex; align-items: center;
             justify-content: center; z-index: 1000; overflow-y: auto;
         `;
         document.body.appendChild(modal);
     }
     
     modal.innerHTML = `
-        <div style="background: white; padding: 25px; border-radius: 16px; max-width: 600px; width: 90%; max-height: 80%; overflow-y: auto;">
-            <h3 style="color: #e07a5f;">⚠️ Review Transactions (${pendingTransactions.length})</h3>
-            <p style="margin-bottom: 15px;">These transactions have low confidence scores. Please verify each one.</p>
+        <div style="background: rgba(255,255,255,0.25); backdrop-filter: blur(20px); padding: 28px; border-radius: 36px; max-width: 600px; width: 90%; max-height: 80%; overflow-y: auto; border: 1px solid rgba(255,255,255,0.4);">
+            <h3 style="color: #726772;">⚠️ Review Transactions (${pendingTransactions.length})</h3>
+            <p style="margin-bottom: 15px; color: rgba(255,255,255,0.8);">These transactions have low confidence scores. Please verify each one.</p>
             
             <div id="pendingReviewsList">
                 ${pendingTransactions.map(t => `
-                    <div id="review-${t.id}" style="border: 1px solid #eee; padding: 12px; margin-bottom: 10px; border-radius: 8px;">
+                    <div id="review-${t.id}" style="border: 1px solid rgba(255,255,255,0.2); padding: 15px; margin-bottom: 12px; border-radius: 24px; background: rgba(255,255,255,0.1);">
                         <p><strong>${escapeHtml(t.description)}</strong></p>
                         <p>Amount: R${Math.abs(t.amount).toFixed(2)} | Confidence: ${Math.round(t.confidence * 100)}%</p>
                         <p>Suggested: <strong>${t.category}</strong></p>
-                        <select id="cat-${t.id}" style="padding: 5px; border-radius: 8px;">
+                        <select id="cat-${t.id}" style="padding: 8px; border-radius: 40px; margin-top: 8px;">
                             <option ${t.category === 'Essential' ? 'selected' : ''}>Essential</option>
                             <option ${t.category === 'Lifestyle' ? 'selected' : ''}>Lifestyle</option>
                             <option ${t.category === 'Financial' ? 'selected' : ''}>Financial</option>
                             <option ${t.category === 'Income' ? 'selected' : ''}>Income</option>
                         </select>
-                        <button onclick="approveTransaction(${t.id})" style="margin-left: 10px; padding: 5px 15px;">✓ Approve</button>
+                        <button onclick="approveTransaction(${t.id})" style="margin-left: 10px; padding: 6px 18px;">✓ Approve</button>
                     </div>
                 `).join('')}
             </div>
             
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <div style="display: flex; gap: 12px; margin-top: 20px;">
                 <button onclick="approveAllPending()" style="flex:1;">✅ Approve All</button>
-                <button onclick="closeReviewModal()" style="flex:1; background:#888;">Close</button>
+                <button onclick="closeReviewModal()" style="flex:1; background: rgba(200,170,170,0.5);">Close</button>
             </div>
         </div>
     `;
@@ -348,11 +399,9 @@ function approveTransaction(id) {
         transaction.source = 'user_reviewed';
         saveData();
         
-        // Remove from modal list
         const element = document.getElementById(`review-${id}`);
         if (element) element.remove();
         
-        // Check if all are done
         const remaining = document.querySelectorAll('#pendingReviewsList > div').length;
         if (remaining === 0) {
             closeReviewModal();
@@ -424,7 +473,7 @@ function toggleShowPending() {
     updateTransactionList();
     const btn = document.getElementById('filterPendingBtn');
     if (btn) {
-        btn.style.background = showOnlyPending ? '#e07a5f' : '#2c7a6e';
+        btn.style.background = showOnlyPending ? '#e07a5f' : '#726772';
         btn.innerText = showOnlyPending ? 'Show All' : 'Show Pending Only';
     }
 }
@@ -437,7 +486,6 @@ function updateAll() {
     updateTransactionList();
     updateChart();
     
-    // Update banner
     const pendingCount = transactions.filter(t => t.needsReview && !t.reviewed).length;
     if (pendingCount > 0) {
         showReviewBanner(pendingCount);
@@ -471,20 +519,20 @@ function updateTransactionList() {
     }
     
     container.innerHTML = filtered.map(t => `
-        <div class="transaction-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; flex-wrap: wrap; gap: 8px; ${t.needsReview && !t.reviewed ? 'background: #fff3cd;' : ''}">
-            <span style="min-width: 100px; font-size: 12px;">${t.date}</span>
-            <span style="flex: 2; font-weight: 500;">${escapeHtml(t.description.substring(0, 40))}</span>
+        <div class="transaction-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.2); flex-wrap: wrap; gap: 8px; background: rgba(255,255,255,0.12); backdrop-filter: blur(8px); border-radius: 24px; margin-bottom: 10px;">
+            <span style="min-width: 100px; font-size: 12px; color: rgba(255,255,255,0.7);">${t.date}</span>
+            <span style="flex: 2; font-weight: 500; color: rgba(255,255,255,0.9);">${escapeHtml(t.description.substring(0, 40))}</span>
             <span style="min-width: 100px; text-align: right; font-weight: 600; color: ${t.amount > 0 ? '#8aa68b' : '#e07a5f'}">
                 ${t.amount > 0 ? '+' : ''}R${Math.abs(t.amount).toFixed(2)}
             </span>
-            <select onchange="updateTransactionCategory(${t.id}, this.value)" style="padding: 5px 10px; border-radius: 20px;">
+            <select onchange="updateTransactionCategory(${t.id}, this.value)" style="padding: 5px 12px; border-radius: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">
                 <option ${t.category === 'Essential' ? 'selected' : ''}>Essential</option>
                 <option ${t.category === 'Lifestyle' ? 'selected' : ''}>Lifestyle</option>
                 <option ${t.category === 'Financial' ? 'selected' : ''}>Financial</option>
                 <option ${t.category === 'Income' ? 'selected' : ''}>Income</option>
             </select>
-            ${t.needsReview && !t.reviewed ? '<span style="background:#e07a5f; color:white; padding:2px 8px; border-radius:12px; font-size:10px;">⚠️ Needs Review</span>' : ''}
-            ${t.reviewed && t.source === 'user_reviewed' ? '<span style="font-size:10px; color:#2c7a6e;">✓ Reviewed</span>' : ''}
+            ${t.needsReview && !t.reviewed ? '<span style="background:#e07a5f; color:white; padding:2px 10px; border-radius: 20px; font-size:10px;">⚠️ Needs Review</span>' : ''}
+            ${t.reviewed && t.source === 'user_reviewed' ? '<span style="font-size:10px; color:#8aa68b;">✓ Reviewed</span>' : ''}
         </div>
     `).join('');
 }
@@ -506,17 +554,18 @@ function updateChart() {
     
     const ctx = document.getElementById('categoryChart').getContext('2d');
     if (categoryChart) categoryChart.destroy();
+    
     categoryChart = new Chart(ctx, {
         type: 'pie',
         data: {
             labels: ['Essential', 'Lifestyle', 'Financial'],
             datasets: [{
                 data: [essential, lifestyle, financial],
-                backgroundColor: ['#2c7a6e', '#e6b85c', '#e07a5f'],
+                backgroundColor: ['#726772', '#9e8e9e', '#c4b4b4'],
                 borderWidth: 0
             }]
         },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
+        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.8)' } } } }
     });
 }
 
@@ -525,7 +574,7 @@ function showToast(message, type) {
     if (!toast) {
         toast = document.createElement('div');
         toast.id = 'toast';
-        toast.style.cssText = `position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; z-index: 1000; background: ${type === 'warning' ? '#e6b85c' : '#2c7a6e'}; color: ${type === 'warning' ? '#2c2c2a' : 'white'}; animation: fadeOut 3s forwards;`;
+        toast.style.cssText = `position: fixed; bottom: 25px; right: 25px; padding: 12px 24px; border-radius: 50px; z-index: 1000; background: rgba(255,255,255,0.25); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.4); color: #5a4a5a; font-weight: 500; animation: fadeOut 3s forwards;`;
         document.body.appendChild(toast);
     }
     toast.innerText = message;
@@ -543,14 +592,14 @@ function escapeHtml(text) {
 // ADD FILTER BUTTON TO HTML
 // ============================================
 function addFilterButton() {
-    const container = document.querySelector('.section h3');
-    if (container && !document.getElementById('filterPendingBtn')) {
+    const filterContainer = document.querySelector('.flex-between');
+    if (filterContainer && !document.getElementById('filterPendingBtn')) {
         const btn = document.createElement('button');
         btn.id = 'filterPendingBtn';
         btn.innerText = 'Show Pending Only';
-        btn.style.cssText = 'float: right; background: #2c7a6e; padding: 5px 12px; font-size: 12px;';
+        btn.style.cssText = 'background: #726772; padding: 6px 16px; font-size: 12px; border-radius: 30px; margin-right: 10px;';
         btn.onclick = toggleShowPending;
-        container.parentElement.querySelector('.flex-between').appendChild(btn);
+        filterContainer.insertBefore(btn, filterContainer.children[1]);
     }
 }
 
@@ -560,10 +609,10 @@ function addFilterButton() {
 function loadSampleData() {
     if (transactions.length === 0) {
         transactions = [
-            { id: 1, date: '2026-05-10', description: 'Salary Deposit', amount: 18500, category: 'Income', confidence: 0.95, needsReview: false, reviewed: true, source: 'api' },
-            { id: 2, date: '2026-05-09', description: 'Checkers Groceries', amount: -845.50, category: 'Essential', confidence: 0.9, needsReview: false, reviewed: true, source: 'api' },
-            { id: 3, date: '2026-05-08', description: 'H&M Clearwater Mall', amount: -320, category: 'Lifestyle', confidence: 0.45, needsReview: true, reviewed: false, source: 'api' },
-            { id: 4, date: '2026-05-07', description: 'Online Payment', amount: -500, category: 'Lifestyle', confidence: 0.3, needsReview: true, reviewed: false, source: 'api' }
+            { id: 1, date: '2026-05-10', description: 'Salary Deposit', amount: 18500, category: 'Income', confidence: 0.95, needsReview: false, reviewed: true, source: 'sample' },
+            { id: 2, date: '2026-05-09', description: 'Checkers Groceries', amount: -845.50, category: 'Essential', confidence: 0.9, needsReview: false, reviewed: true, source: 'sample' },
+            { id: 3, date: '2026-05-08', description: 'H&M Clearwater Mall', amount: -320, category: 'Lifestyle', confidence: 0.45, needsReview: true, reviewed: false, source: 'sample' },
+            { id: 4, date: '2026-05-07', description: 'Online Payment', amount: -500, category: 'Lifestyle', confidence: 0.3, needsReview: true, reviewed: false, source: 'sample' }
         ];
         saveData();
     }
@@ -577,7 +626,12 @@ function init() {
     loadSampleData();
     updateAll();
     addFilterButton();
-    console.log('✅ Track My Fin ready. Transactions are saved first, then you can review flagged ones.');
+    console.log('✅ Track My Fin ready.');
+    if (!USE_REAL_API) {
+        console.log('⚠️ API disabled - using keyword fallback');
+    } else {
+        console.log('🤖 API enabled - using Vercel proxy');
+    }
 }
 
 init();
