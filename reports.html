@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track My Fin - Reports</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+
+        <nav class="top-nav">
+            <a href="index.html"><i class="fas fa-chart-pie"></i> Dashboard</a>
+            <a href="budget.html"><i class="fas fa-wallet"></i> Budget</a>
+            <a href="debt.html"><i class="fas fa-credit-card"></i> Debt</a>
+            <a href="reports.html" class="active"><i class="fas fa-file-alt"></i> Reports</a>
+            <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+        </nav>
+
+        <h1><i class="fas fa-file-alt"></i> Monthly Reports</h1>
+        <p class="subtitle">AI-generated summaries of your spending</p>
+
+        <div class="section">
+            <h3><i class="fas fa-calendar-alt"></i> Select Month</h3>
+            <div class="form-row">
+                <input type="month" id="reportMonth" value="2026-05">
+                <button onclick="generateReport()"><i class="fas fa-file-alt"></i> Generate Report</button>
+                <button onclick="exportCSV()" class="btn-secondary"><i class="fas fa-file-csv"></i> Export CSV</button>
+            </div>
+        </div>
+
+        <div class="section" id="reportDisplay">
+            <h3><i class="fas fa-robot"></i> AI Summary</h3>
+            <div id="reportContent">
+                <div class="empty-state"><i class="fas fa-file-alt"></i> Select a month and generate a report</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

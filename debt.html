@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track My Fin - Debt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+
+        <nav class="top-nav">
+            <a href="index.html"><i class="fas fa-chart-pie"></i> Dashboard</a>
+            <a href="budget.html"><i class="fas fa-wallet"></i> Budget</a>
+            <a href="debt.html" class="active"><i class="fas fa-credit-card"></i> Debt</a>
+            <a href="reports.html"><i class="fas fa-file-alt"></i> Reports</a>
+            <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+        </nav>
+
+        <h1><i class="fas fa-credit-card"></i> Debt Destroyer</h1>
+        <p class="subtitle">Track your debts and get AI-powered payoff recommendations</p>
+
+        <div class="summary-cards">
+            <div class="card">
+                <h3><i class="fas fa-credit-card"></i> Total Debt</h3>
+                <div class="amount" id="totalDebt">R0</div>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-percent"></i> Highest Rate</h3>
+                <div class="amount" id="highestRate">0%</div>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-lightbulb"></i> AI Recommendation</h3>
+                <div class="amount" id="aiRecommendation" style="font-size:16px;">Add a debt to get started</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3><i class="fas fa-plus-circle"></i> Add Debt</h3>
+            <div class="form-row">
+                <input type="text" id="debtName" placeholder="Creditor (e.g., Credit Card)">
+                <input type="number" id="debtBalance" placeholder="Balance">
+                <input type="number" id="debtRate" placeholder="Interest Rate %">
+                <button onclick="addDebt()"><i class="fas fa-plus"></i> Add Debt</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="flex-between">
+                <h3><i class="fas fa-list"></i> Your Debts</h3>
+                <button onclick="clearDebts()" class="btn-danger btn-small"><i class="fas fa-trash"></i> Clear All</button>
+            </div>
+            <div id="debtList">
+                <div class="empty-state"><i class="fas fa-inbox"></i> No debts added yet</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Force load debts when page loads (this is the FIX)
+        displayDebts();
+        updateDebtSummary();
+    </script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track My Fin - Budget</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+
+        <!-- Navigation -->
+        <nav class="top-nav">
+            <a href="index.html"><i class="fas fa-chart-pie"></i> Dashboard</a>
+            <a href="budget.html" class="active"><i class="fas fa-wallet"></i> Budget</a>
+            <a href="debt.html"><i class="fas fa-credit-card"></i> Debt</a>
+            <a href="reports.html"><i class="fas fa-file-alt"></i> Reports</a>
+            <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+        </nav>
+
+        <h1><i class="fas fa-wallet"></i> Budget</h1>
+        <p class="subtitle">Set your monthly spending limits and track progress</p>
+
+        <!-- Monthly Budgets - With Save Button -->
+        <div class="section">
+            <h3><i class="fas fa-pencil-alt"></i> Set Monthly Budgets</h3>
+            <div class="budget-grid">
+                <div class="budget-item">
+                    <label><i class="fas fa-circle" style="color:#6058a3;"></i> Essential</label>
+                    <input type="number" id="budgetEssential" placeholder="R0" value="">
+                </div>
+                <div class="budget-item">
+                    <label><i class="fas fa-circle" style="color:#b271af;"></i> Lifestyle</label>
+                    <input type="number" id="budgetLifestyle" placeholder="R0" value="">
+                </div>
+                <div class="budget-item">
+                    <label><i class="fas fa-circle" style="color:#7aa2c6;"></i> Financial</label>
+                    <input type="number" id="budgetFinancial" placeholder="R0" value="">
+                </div>
+            </div>
+            <button onclick="saveBudgets()" style="margin-top:15px;"><i class="fas fa-save"></i> Save Budgets</button>
+            <div id="budgetStatus" style="margin-top:10px;"></div>
+        </div>
+
+        <!-- Budget Progress -->
+        <div class="section">
+            <h3><i class="fas fa-chart-bar"></i> Budget Progress</h3>
+            <div id="budgetProgressDisplay">
+                <div class="empty-state"><i class="fas fa-inbox"></i> Set budgets above to see progress</div>
+            </div>
+        </div>
+
+        <!-- Savings Goal -->
+        <div class="section">
+            <h3><i class="fas fa-piggy-bank"></i> Savings Goal</h3>
+            <div class="form-row">
+                <input type="text" id="savingsGoalName" placeholder="Goal name (e.g., Holiday, Emergency Fund)">
+                <input type="number" id="savingsTarget" placeholder="Target amount">
+                <button onclick="saveSavingsGoal()"><i class="fas fa-save"></i> Set Goal</button>
+            </div>
+            <div id="savingsDisplay" style="margin-top:15px;">
+                <p><i class="fas fa-info-circle"></i> No savings goal set yet.</p>
+            </div>
+            <div class="budget-progress" style="margin-top:10px;">
+                <div class="budget-progress-bar essential" id="savingsProgress" style="width:0%;"></div>
+            </div>
+            <div class="budget-stats">
+                <span id="savingsCurrent">R0 saved</span>
+                <span id="savingsTargetDisplay">Target: R0</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Load budgets when page loads
+        loadBudgets();
+        displaySavingsGoal();
+        updateBudgetDisplay();
+    </script>
+</body>
+</html>

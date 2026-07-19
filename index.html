@@ -3,49 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Track My Fin - Personal Finance Tracker</title>
+    <title>Track My Fin - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>📊 Track My Fin</h1>
-        <p class="subtitle">AI-powered personal finance tracker for South Africans</p>
+
+        <!-- Navigation -->
+        <nav class="top-nav">
+            <a href="index.html" class="active"><i class="fas fa-chart-pie"></i> Dashboard</a>
+            <a href="budget.html"><i class="fas fa-wallet"></i> Budget</a>
+            <a href="debt.html"><i class="fas fa-credit-card"></i> Debt</a>
+            <a href="reports.html"><i class="fas fa-file-alt"></i> Reports</a>
+            <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+        </nav>
+
+        <h1><i class="fas fa-chart-pie"></i> Dashboard</h1>
+        <p class="subtitle">Your financial overview at a glance</p>
 
         <!-- Summary Cards -->
         <div class="summary-cards">
             <div class="card">
-                <h3> INCOME</h3>
+                <h3><i class="fas fa-arrow-up"></i> Income</h3>
                 <div class="amount" id="incomeAmount">R0</div>
             </div>
             <div class="card">
-                <h3> EXPENSES</h3>
+                <h3><i class="fas fa-arrow-down"></i> Expenses</h3>
                 <div class="amount" id="expenseAmount">R0</div>
             </div>
             <div class="card">
-                <h3>REMAINING</h3>
+                <h3><i class="fas fa-circle"></i> Remaining</h3>
                 <div class="amount" id="remainingAmount">R0</div>
             </div>
         </div>
 
-        <!-- Chart & Breakdown Section -->
+        <!-- Goal Setting - Multiple Goals -->
         <div class="section">
-            <h3>Spending Analysis</h3>
+            <div class="flex-between">
+                <h3><i class="fas fa-bullseye"></i> Financial Goals</h3>
+                <button onclick="clearAllGoals()" class="btn-danger btn-small"><i class="fas fa-trash"></i> Clear All</button>
+            </div>
+            <div class="form-row">
+                <select id="goalType" style="flex:1;">
+                    <option value="pay_debt">Pay off debt</option>
+                    <option value="save">Save for something</option>
+                    <option value="understand">Understand spending</option>
+                    <option value="emergency">Build emergency fund</option>
+                </select>
+                <input type="number" id="goalAmount" placeholder="Target amount (R)" style="flex:1;">
+                <button onclick="saveGoal()"><i class="fas fa-plus"></i> Add Goal</button>
+            </div>
+            <div id="goalDisplay" style="margin-top:15px;"></div>
+        </div>
+
+        <!-- Chart & Breakdown -->
+        <div class="section">
+            <h3><i class="fas fa-chart-pie"></i> Spending Analysis</h3>
             <div class="chart-breakdown">
                 <div class="chart-container">
                     <canvas id="categoryChart" width="250" height="250"></canvas>
                 </div>
                 <div class="breakdown" id="breakdownList">
                     <div class="breakdown-item">
-                        <span class="breakdown-label essential">● Essential</span>
+                        <span class="breakdown-label essential"><i class="fas fa-circle" style="color:#6058a3;"></i> Essential</span>
                         <span class="breakdown-amount" id="essentialAmount">R0</span>
                     </div>
                     <div class="breakdown-item">
-                        <span class="breakdown-label lifestyle">● Lifestyle</span>
+                        <span class="breakdown-label lifestyle"><i class="fas fa-circle" style="color:#b271af;"></i> Lifestyle</span>
                         <span class="breakdown-amount" id="lifestyleAmount">R0</span>
                     </div>
                     <div class="breakdown-item">
-                        <span class="breakdown-label financial">● Financial</span>
+                        <span class="breakdown-label financial"><i class="fas fa-circle" style="color:#7aa2c6;"></i> Financial</span>
                         <span class="breakdown-amount" id="financialAmount">R0</span>
                     </div>
                 </div>
@@ -54,39 +86,39 @@
 
         <!-- Add Manual Transaction -->
         <div class="section">
-            <h3> Add Manual Transaction</h3>
+            <h3><i class="fas fa-plus-circle"></i> Add Manual Transaction</h3>
             <div class="form-row">
                 <input type="text" id="descInput" placeholder="Description (e.g., Checkers, Uber)">
                 <input type="number" id="amountInput" placeholder="Amount">
                 <select id="typeSelect">
-                    <option value="expense">Expense (-)</option>
-                    <option value="income">Income (+)</option>
+                    <option value="expense">Expense</option>
+                    <option value="income">Income</option>
                 </select>
-                <button onclick="addTransaction()">Add Transaction</button>
+                <button onclick="addTransaction()"><i class="fas fa-plus"></i> Add</button>
             </div>
         </div>
 
         <!-- Upload CSV -->
         <div class="section">
-            <h3>Upload Bank Statement (CSV)</h3>
+            <h3><i class="fas fa-upload"></i> Upload Bank Statement (CSV)</h3>
             <div class="form-row">
                 <input type="file" id="csvFile" accept=".csv">
-                <button onclick="uploadCSV()">Process Statement</button>
+                <button onclick="uploadCSV()" id="csvUploadBtn"><i class="fas fa-file-csv"></i> Process</button>
             </div>
-            <div class="note">CSV format: Date,Description,Amount (negative for expense, positive for income)</div>
-            <div class="note">Example: 2026-05-10,Checkers Groceries,-845.50</div>
+            <div class="note"><i class="fas fa-info-circle"></i> Format: Date,Description,Amount (negative for expense)</div>
         </div>
 
         <!-- Transaction List -->
         <div class="section">
             <div class="flex-between">
-                <h3>Transaction History</h3>
-                <button onclick="clearAllData()" class="btn-danger btn-small">Clear All</button>
+                <h3><i class="fas fa-list"></i> Transaction History</h3>
+                <button onclick="clearAllData()" class="btn-danger btn-small"><i class="fas fa-trash"></i> Clear All</button>
             </div>
             <div id="transactionList" class="transaction-list">
-                <div class="empty-state">No transactions yet. Add one above or upload a CSV.</div>
+                <div class="empty-state"><i class="fas fa-inbox"></i> No transactions yet</div>
             </div>
         </div>
+
     </div>
 
     <script src="app.js"></script>

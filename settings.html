@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track My Fin - Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+
+        <nav class="top-nav">
+            <a href="index.html"><i class="fas fa-chart-pie"></i> Dashboard</a>
+            <a href="budget.html"><i class="fas fa-wallet"></i> Budget</a>
+            <a href="debt.html"><i class="fas fa-credit-card"></i> Debt</a>
+            <a href="reports.html"><i class="fas fa-file-alt"></i> Reports</a>
+            <a href="settings.html" class="active"><i class="fas fa-cog"></i> Settings</a>
+        </nav>
+
+        <h1><i class="fas fa-cog"></i> Settings</h1>
+        <p class="subtitle">Manage your preferences and data</p>
+
+        <!-- Profile -->
+        <div class="section">
+            <h3><i class="fas fa-user"></i> Profile</h3>
+            <div class="form-row">
+                <input type="text" id="profileName" placeholder="Your name" style="flex:1;">
+                <input type="number" id="monthlyIncome" placeholder="Monthly Income (R)" style="flex:1;">
+            </div>
+            <div class="form-row" style="margin-top:10px;">
+                <input type="text" id="userOccupation" placeholder="Occupation (e.g., Student, Developer)" style="flex:1;">
+                <input type="text" id="userGoal" placeholder="Financial goal (e.g., Save for a car)" style="flex:1;">
+            </div>
+            <button onclick="saveProfile()" style="margin-top:10px;"><i class="fas fa-save"></i> Save Profile</button>
+            <div id="profileStatus" style="margin-top:10px;"></div>
+        </div>
+
+        <!-- Profile Display -->
+        <div class="section">
+            <h3><i class="fas fa-id-card"></i> Your Profile</h3>
+            <div id="profileDisplay" style="margin-top:10px;">
+                <p style="color:#888;"><i class="fas fa-info-circle"></i> No profile set yet. Fill in the form above.</p>
+            </div>
+        </div>
+
+        <!-- Custom Categories -->
+        <div class="section">
+            <h3><i class="fas fa-tags"></i> Custom Categories</h3>
+            <div class="form-row">
+                <input type="text" id="newCategoryName" placeholder="Category name (e.g., Transport, Education)" style="flex:1;">
+                <select id="categoryColor" style="flex:0.5;">
+                    <option value="#6058a3">Purple</option>
+                    <option value="#b271af">Pink</option>
+                    <option value="#7aa2c6">Blue</option>
+                    <option value="#6a8a6a">Green</option>
+                    <option value="#e6b85c">Gold</option>
+                </select>
+                <button onclick="addCustomCategory()"><i class="fas fa-plus"></i> Add</button>
+            </div>
+            <div id="customCategoryList" style="margin-top:15px;">
+                <p style="color:#888;"><i class="fas fa-info-circle"></i> No custom categories added yet</p>
+            </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="section">
+            <h3><i class="fas fa-database"></i> Data Management</h3>
+            <div class="form-row">
+                <button onclick="exportAllData()" class="btn-secondary"><i class="fas fa-download"></i> Export All Data (JSON)</button>
+                <button onclick="clearAllData()" class="btn-danger"><i class="fas fa-trash"></i> Clear All Data</button>
+            </div>
+            <div class="note"><i class="fas fa-info-circle"></i> Clearing data is permanent and cannot be undone.</div>
+        </div>
+
+        <!-- About -->
+        <div class="section">
+            <h3><i class="fas fa-info-circle"></i> About</h3>
+            <p style="color:#5a4a5a;">Track My Fin v1.0 - Alpha Release</p>
+            <p style="color:#888; font-size:12px;">AI-powered personal finance tracker for South Africans</p>
+            <p style="color:#888; font-size:12px; margin-top:10px;"><i class="fas fa-shield-alt"></i> All data stored locally in your browser.</p>
+            <p style="color:#888; font-size:12px;">This tool provides insights only and does not constitute financial advice.</p>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Load profile when page loads
+        loadProfile();
+        displayCustomCategories();
+    </script>
+</body>
+</html>
