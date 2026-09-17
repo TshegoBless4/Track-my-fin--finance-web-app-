@@ -1,11 +1,11 @@
 // ============================================
 // api/categorize.js - Vercel Serverless Function
-// Your API key is safe here - never exposed to the browser
+// AI categorization for Track My Fin
 // ============================================
 
 export default async function handler(req, res) {
     // ============================================
-    // CORS HEADERS (Applied at function level too)
+    // CORS HEADERS
     // ============================================
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -40,11 +40,11 @@ export default async function handler(req, res) {
     const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
     if (!OPENROUTER_API_KEY) {
-        console.error('Missing API key: OPENROUTER_API_KEY not set');
-        return res.status(500).json({ 
-            error: 'Server configuration error',
+        console.error('Missing API key: OPENROUTER_API_KEY not set in Vercel');
+        return res.status(200).json({
             category: 'Lifestyle',
-            confidence: 0.3
+            confidence: 0.3,
+            note: 'Server configuration error: missing API key'
         });
     }
 
@@ -57,27 +57,23 @@ export default async function handler(req, res) {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                'HTTP-Referer': 'https://track-my-fin.vercel.app',
+                'HTTP-Referer': 'https://track-my-fin-finance-web-app.vercel.app',
                 'X-Title': 'Track My Fin'
             },
             body: JSON.stringify({
-               model: 'google/gemma-4-31b-it:free',
+                model: 'google/gemma-4-31b-it:free',
                 messages: [
                     {
                         role: 'system',
                         content: `You are a financial categorizer for South African users.
-Return ONLY a JSON object with "category" and "confidence" (0-1).
-
-Category must be one of: Essential, Lifestyle, Financial, Income.
+Return ONLY one word from this list: Essential, Lifestyle, Financial, or Income.
 
 Essential = rent, groceries, Checkers, Pick n Pay, Shoprite, Woolworths food, medication, utilities, electricity, water, medical aid, school fees, transport, petrol, fuel
 Lifestyle = restaurant, Uber, Bolt, Netflix, Spotify, DStv, coffee, takeaway, shopping, mall, clothing, entertainment, movies
 Financial = bank fees, Capitec, FNB, Nedbank, Standard Bank, ABSA, insurance, loan, credit card, interest
 Income = salary, deposit, payment received, freelance, stipend, allowance, refund
 
-Confidence: How certain are you? (1.0 = completely certain, 0.5 = unsure)
-
-Return JSON like: {"category":"Essential","confidence":0.92}`
+Do not explain. Do not add extra words. Return only the single category word.`
                     },
                     {
                         role: 'user',
@@ -85,7 +81,7 @@ Return JSON like: {"category":"Essential","confidence":0.92}`
                     }
                 ],
                 temperature: 0.1,
-                max_tokens: 60
+                max_tokens: 10
             })
         });
 
@@ -98,47 +94,49 @@ Return JSON like: {"category":"Essential","confidence":0.92}`
             return res.status(200).json({
                 category: 'Lifestyle',
                 confidence: 0.3,
-                note: 'API error, using fallback'
+                note: 'API error, using fallback',
+                debug_status: response.status,
+                debug_details: errorText
             });
         }
 
         const data = await response.json();
-        let result = data.choices[0].message.content.trim();
-
-        // Remove markdown code blocks if present
-        result = result.replace(/```json/g, '').replace(/```/g, '').trim();
 
         // ============================================
-        // PARSE THE JSON RESPONSE
+        // PARSE THE RESPONSE
         // ============================================
-        let parsed;
+        let rawText = '';
         try {
-            parsed = JSON.parse(result);
-        } catch(e) {
-            console.error('Failed to parse AI response:', result);
-            // If JSON parsing fails, try to extract category from text
-            const categoryMatch = result.match(/(Essential|Lifestyle|Financial|Income)/i);
-            parsed = {
-                category: categoryMatch ? categoryMatch[1] : 'Lifestyle',
-                confidence: 0.5
-            };
+            rawText = data.choices[0].message.content.trim();
+        } catch (e) {
+            console.error('Unexpected response shape:', JSON.stringify(data));
+            return res.status(200).json({
+                category: 'Lifestyle',
+                confidence: 0.3,
+                note: 'Unexpected AI response'
+            });
         }
 
-        // ============================================
-        // VALIDATE CATEGORY
-        // ============================================
+        // Extract just the category word from the response
         const validCategories = ['Essential', 'Lifestyle', 'Financial', 'Income'];
-        if (!validCategories.includes(parsed.category)) {
-            parsed.category = 'Lifestyle';
-            parsed.confidence = 0.4;
+        let category = 'Lifestyle';
+        let matched = false;
+
+        for (const valid of validCategories) {
+            if (rawText.toLowerCase().includes(valid.toLowerCase())) {
+                category = valid;
+                matched = true;
+                break;
+            }
         }
 
         // ============================================
         // RETURN SUCCESSFUL RESPONSE
         // ============================================
         return res.status(200).json({
-            category: parsed.category,
-            confidence: parsed.confidence || 0.7
+            category: category,
+            confidence: matched ? 0.85 : 0.4,
+            source: 'ai'
         });
 
     } catch (error) {
@@ -146,7 +144,8 @@ Return JSON like: {"category":"Essential","confidence":0.92}`
         return res.status(200).json({
             category: 'Lifestyle',
             confidence: 0.3,
-            note: 'Server error, using fallback'
+            note: 'Server error, using fallback',
+            debug_details: String(error)
         });
     }
 }
