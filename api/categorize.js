@@ -61,7 +61,7 @@ export default async function handler(req, res) {
                 'X-Title': 'Track My Fin'
             },
             body: JSON.stringify({
-                model: 'google/gemma-4-31b-it:free',
+               model: 'openrouter/free',
                 messages: [
                     {
                         role: 'system',
