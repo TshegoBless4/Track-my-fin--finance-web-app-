@@ -19,7 +19,7 @@ let USE_REAL_API = true;
 // ============================================
 // DATA STORAGE
 // ============================================
-let transactions = [];
+let transactions = [];      
 let categoryChart = null;
 const SAMPLE_DATA_KEY = 'trackmyfin_sample_loaded';
 
@@ -1390,28 +1390,47 @@ function clearSavingsGoal() {
 // INIT
 // ============================================
 function init() {
-    loadData();
+   loadData();
     loadSampleData();
     updateAll();
-    addFilterButton();
-    displayDebts();
-    updateDebtSummary();
-    displayGoals();
-    displayProfile();
-    displaySavingsGoal();
-    loadBudgets();
-    loadProfile();
-    displayCustomCategories();
+    
+    // Only run these if the elements exist on the current page
+    if (document.getElementById('transactionList')) {
+        addFilterButton();
+    }
+    if (document.getElementById('debtList')) {
+        displayDebts();
+        updateDebtSummary();
+    }
+    if (document.getElementById('goalDisplay')) {
+        displayGoals();
+    }
+    if (document.getElementById('profileDisplay')) {
+        displayProfile();
+    }
+    if (document.getElementById('profileName')) {
+        loadProfile();
+    }
+    if (document.getElementById('savingsDisplay')) {
+        displaySavingsGoal();
+    }
+    if (document.getElementById('budgetEssential')) {
+        loadBudgets();
+        updateBudgetDisplay();
+    }
+    if (document.getElementById('customCategoryList')) {
+        displayCustomCategories();
+    }
+    
     console.log('Track My Fin ready.');
     if (!USE_REAL_API) {
         console.log('API disabled - using keyword fallback');
     } else {
-        console.log('API enabled - using Vercel proxy');
+        console.log('API enabled - using:', API_URL);
     }
 }
 
 init();
-
 // Force reset function (run in console if needed)
 function forceResetEverything() {
     localStorage.clear();
