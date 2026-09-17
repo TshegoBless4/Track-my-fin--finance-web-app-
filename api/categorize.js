@@ -112,8 +112,8 @@ Do not explain. Do not add extra words. Return only the single category word.`
             console.error('Unexpected response shape:', JSON.stringify(data));
             return res.status(200).json({
                 category: 'Lifestyle',
-                confidence: 0.3,
-                note: 'Unexpected AI response'
+                 note: 'Unexpected AI response',
+        debug_full_response: JSON.stringify(data).substring(0, 800)
             });
         }
 
