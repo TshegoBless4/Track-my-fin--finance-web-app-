@@ -61,7 +61,7 @@ export default async function handler(req, res) {
                 'X-Title': 'Track My Fin'
             },
             body: JSON.stringify({
-               model: 'openrouter/free',
+              model: 'nex-agi/nex-n2.5-mini:free',
                 messages: [
                     {
                         role: 'system',
