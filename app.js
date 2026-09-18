@@ -4,17 +4,20 @@
 // ============================================
 
 // ============================================
-// API CONFIGURATION
+// API CONFIGURATION (FIXED - RELATIVE URL)
 // ============================================
 const isLocal = window.location.hostname === 'localhost' || 
-                window.location.hostname === '127.0.0.1' ||
-                window.location.hostname.includes('vercel.app') === false;
+                window.location.hostname === '127.0.0.1';
 
-const VERCEL_PROXY_URL = 'https://track-my-fin.vercel.app/api/categorize';
+// Use a RELATIVE path so the browser always calls the API on the same domain.
+// This eliminates CORS errors because the request is now same-origin.
+const VERCEL_PROXY_URL = '/api/categorize';
 const LOCAL_PROXY_URL = 'http://localhost:3000/api/categorize';
 
 const API_URL = isLocal ? LOCAL_PROXY_URL : VERCEL_PROXY_URL;
 let USE_REAL_API = true;
+
+console.log('Using API URL:', API_URL);
 
 // ============================================
 // DATA STORAGE
@@ -66,7 +69,8 @@ async function categorizeWithAPI(description, amount) {
         if (data.category) {
             return { 
                 category: data.category, 
-                confidence: data.confidence || 0.8 
+                confidence: data.confidence || 0.8,
+                source: data.source || 'ai'
             };
         }
         return null;
@@ -137,15 +141,18 @@ async function categorizeTransaction(description, amount) {
             result = apiResult;
         } else {
             result = categorizeWithKeywords(description);
+            result.source = 'fallback';
         }
     } else {
         result = categorizeWithKeywords(description);
+        result.source = 'fallback';
     }
     
     return {
         category: result.category,
         confidence: result.confidence,
-        needsReview: needsReview(result.confidence, description)
+        needsReview: needsReview(result.confidence, description),
+        source: result.source || 'fallback'
     };
 }
 
@@ -226,7 +233,7 @@ async function addTransaction() {
         confidence: result.confidence,
         needsReview: result.needsReview,
         reviewed: !result.needsReview,
-        source: USE_REAL_API ? 'api' : 'fallback'
+        source: result.source
     });
     
     saveData();
@@ -315,7 +322,7 @@ async function uploadCSV() {
                         confidence: result.confidence,
                         needsReview: result.needsReview,
                         reviewed: !result.needsReview,
-                        source: USE_REAL_API ? 'api' : 'fallback'
+                        source: result.source
                     });
                     
                     addedCount++;
@@ -572,18 +579,26 @@ function updateAll() {
 }
 
 function updateSummary() {
+    const incomeEl = document.getElementById('incomeAmount');
+    const expenseEl = document.getElementById('expenseAmount');
+    const remainingEl = document.getElementById('remainingAmount');
+    
+    if (!incomeEl || !expenseEl || !remainingEl) return;
+    
     let income = 0, expense = 0;
     transactions.forEach(t => {
         if (t.amount > 0) income += t.amount;
         else expense += Math.abs(t.amount);
     });
-    document.getElementById('incomeAmount').innerHTML = `R${income.toFixed(2)}`;
-    document.getElementById('expenseAmount').innerHTML = `R${expense.toFixed(2)}`;
-    document.getElementById('remainingAmount').innerHTML = `R${(income - expense).toFixed(2)}`;
+    incomeEl.innerHTML = `R${income.toFixed(2)}`;
+    expenseEl.innerHTML = `R${expense.toFixed(2)}`;
+    remainingEl.innerHTML = `R${(income - expense).toFixed(2)}`;
 }
 
 function updateTransactionList() {
     const container = document.getElementById('transactionList');
+    if (!container) return;
+    
     let filtered = [...transactions];
     if (showOnlyPending) {
         filtered = filtered.filter(t => t.needsReview && !t.reviewed);
@@ -595,10 +610,17 @@ function updateTransactionList() {
         return;
     }
     
-    container.innerHTML = filtered.map(t => `
+    container.innerHTML = filtered.map(t => {
+        const sourceBadge = t.source === 'ai' 
+            ? '<span style="background:#6058a3; color:white; padding:2px 8px; border-radius:12px; font-size:9px;">AI</span>' 
+            : t.source === 'fallback' 
+            ? '<span style="background:#c47060; color:white; padding:2px 8px; border-radius:12px; font-size:9px;">RULES</span>' 
+            : '';
+        
+        return `
         <div class="transaction-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.2); flex-wrap: wrap; gap: 8px; background: rgba(255,255,255,0.12); backdrop-filter: blur(8px); border-radius: 24px; margin-bottom: 10px;">
             <span style="min-width: 100px; font-size: 12px; color: #888;">${t.date}</span>
-            <span style="flex: 2; font-weight: 500; color: #2c2c2a;">${escapeHtml(t.description.substring(0, 40))}</span>
+            <span style="flex: 2; font-weight: 500; color: #2c2c2a;">${escapeHtml(t.description.substring(0, 40))} ${sourceBadge}</span>
             <span style="min-width: 100px; text-align: right; font-weight: 600; color: ${t.amount > 0 ? '#6a8a6a' : '#c47060'}">
                 ${t.amount > 0 ? '+' : ''}R${Math.abs(t.amount).toFixed(2)}
             </span>
@@ -611,10 +633,13 @@ function updateTransactionList() {
             ${t.needsReview && !t.reviewed ? '<span style="background: #f4b1b4; color: #4a3a4a; padding:2px 10px; border-radius: 20px; font-size:10px;"><i class="fas fa-flag"></i> Needs Review</span>' : ''}
             ${t.reviewed && t.source === 'user_reviewed' ? '<span style="font-size:10px; color: #6058a3;"><i class="fas fa-check"></i> Reviewed</span>' : ''}
         </div>
-    `).join('');
+    `}).join('');
 }
 
 function updateChart() {
+    const canvas = document.getElementById('categoryChart');
+    if (!canvas) return;
+    
     let essential = 0, lifestyle = 0, financial = 0;
     transactions.forEach(t => {
         if (t.amount < 0) {
@@ -625,11 +650,14 @@ function updateChart() {
         }
     });
     
-    document.getElementById('essentialAmount').innerHTML = `R${essential.toFixed(2)}`;
-    document.getElementById('lifestyleAmount').innerHTML = `R${lifestyle.toFixed(2)}`;
-    document.getElementById('financialAmount').innerHTML = `R${financial.toFixed(2)}`;
+    const essentialEl = document.getElementById('essentialAmount');
+    const lifestyleEl = document.getElementById('lifestyleAmount');
+    const financialEl = document.getElementById('financialAmount');
+    if (essentialEl) essentialEl.innerHTML = `R${essential.toFixed(2)}`;
+    if (lifestyleEl) lifestyleEl.innerHTML = `R${lifestyle.toFixed(2)}`;
+    if (financialEl) financialEl.innerHTML = `R${financial.toFixed(2)}`;
     
-    const ctx = document.getElementById('categoryChart').getContext('2d');
+    const ctx = canvas.getContext('2d');
     if (categoryChart) categoryChart.destroy();
     
     categoryChart = new Chart(ctx, {
@@ -712,7 +740,7 @@ function loadSampleData() {
 }
 
 // ============================================
-// MULTIPLE GOALS - FIXED
+// MULTIPLE GOALS
 // ============================================
 function saveGoal() {
     const goalType = document.getElementById('goalType').value;
@@ -740,6 +768,8 @@ function saveGoal() {
 
 function displayGoals() {
     const container = document.getElementById('goalDisplay');
+    if (!container) return;
+    
     const goals = JSON.parse(localStorage.getItem('trackmyfin_goals') || '[]');
     
     if (goals.length === 0) {
@@ -784,7 +814,7 @@ function clearAllGoals() {
 }
 
 // ============================================
-// DEBT FUNCTIONS - FIXED
+// DEBT FUNCTIONS
 // ============================================
 function addDebt() {
     const name = document.getElementById('debtName').value.trim();
@@ -818,6 +848,8 @@ function addDebt() {
 
 function displayDebts() {
     const container = document.getElementById('debtList');
+    if (!container) return;
+    
     const debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
     
     if (debts.length === 0) {
@@ -854,7 +886,7 @@ function updateDebtSummary() {
     if (rateEl) rateEl.innerHTML = `${highestRate.toFixed(1)}%`;
     if (aiEl) {
         if (debts.length === 0) {
-            aiEl.innerHTML = 'Add a debt to get recommendations';
+            aiEl.innerHTML = 'Add a debt to get a payoff strategy';
         } else {
             const highest = debts.reduce((max, d) => (d.rate || 0) > (max.rate || 0) ? d : max, debts[0]);
             aiEl.innerHTML = `Pay <strong>${escapeHtml(highest.name)}</strong> first (${highest.rate}%)`;
@@ -872,7 +904,7 @@ function clearDebts() {
 }
 
 // ============================================
-// BUDGET - FIXED PERSISTENCE
+// BUDGET
 // ============================================
 function saveBudgets() {
     const essential = document.getElementById('budgetEssential').value;
@@ -917,10 +949,10 @@ function loadBudgets() {
 function updateBudgetDisplay() {
     const saved = localStorage.getItem('trackmyfin_budgets');
     const container = document.getElementById('budgetProgressDisplay');
+    if (!container) return;
+    
     if (!saved) {
-        if (container) {
-            container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i> Set budgets above to see progress</div>';
-        }
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i> Set budgets above to see progress</div>';
         return;
     }
     
@@ -943,56 +975,41 @@ function updateBudgetDisplay() {
             }
         });
         
-        updateBudgetItem('essential', budgets.essential, essentialSpent);
-        updateBudgetItem('lifestyle', budgets.lifestyle, lifestyleSpent);
-        updateBudgetItem('financial', budgets.financial, financialSpent);
-        
-        if (container) {
-            container.innerHTML = `
-                <div class="budget-grid">
-                    <div class="budget-item">
-                        <label><i class="fas fa-circle" style="color:#6058a3;"></i> Essential</label>
-                        <div class="budget-progress">
-                            <div class="budget-progress-bar essential" id="progressEssential" style="width:${budgets.essential > 0 ? Math.min((essentialSpent / budgets.essential) * 100, 100) : 0}%;"></div>
-                        </div>
-                        <div class="budget-stats">
-                            <span>R${essentialSpent.toFixed(2)}</span>
-                            <span>R${budgets.essential.toFixed(2)}</span>
-                        </div>
+        container.innerHTML = `
+            <div class="budget-grid">
+                <div class="budget-item">
+                    <label><i class="fas fa-circle" style="color:#6058a3;"></i> Essential</label>
+                    <div class="budget-progress">
+                        <div class="budget-progress-bar essential" style="width:${budgets.essential > 0 ? Math.min((essentialSpent / budgets.essential) * 100, 100) : 0}%;"></div>
                     </div>
-                    <div class="budget-item">
-                        <label><i class="fas fa-circle" style="color:#b271af;"></i> Lifestyle</label>
-                        <div class="budget-progress">
-                            <div class="budget-progress-bar lifestyle" id="progressLifestyle" style="width:${budgets.lifestyle > 0 ? Math.min((lifestyleSpent / budgets.lifestyle) * 100, 100) : 0}%;"></div>
-                        </div>
-                        <div class="budget-stats">
-                            <span>R${lifestyleSpent.toFixed(2)}</span>
-                            <span>R${budgets.lifestyle.toFixed(2)}</span>
-                        </div>
-                    </div>
-                    <div class="budget-item">
-                        <label><i class="fas fa-circle" style="color:#7aa2c6;"></i> Financial</label>
-                        <div class="budget-progress">
-                            <div class="budget-progress-bar financial" id="progressFinancial" style="width:${budgets.financial > 0 ? Math.min((financialSpent / budgets.financial) * 100, 100) : 0}%;"></div>
-                        </div>
-                        <div class="budget-stats">
-                            <span>R${financialSpent.toFixed(2)}</span>
-                            <span>R${budgets.financial.toFixed(2)}</span>
-                        </div>
+                    <div class="budget-stats">
+                        <span>R${essentialSpent.toFixed(2)}</span>
+                        <span>R${budgets.essential.toFixed(2)}</span>
                     </div>
                 </div>
-            `;
-        }
+                <div class="budget-item">
+                    <label><i class="fas fa-circle" style="color:#b271af;"></i> Lifestyle</label>
+                    <div class="budget-progress">
+                        <div class="budget-progress-bar lifestyle" style="width:${budgets.lifestyle > 0 ? Math.min((lifestyleSpent / budgets.lifestyle) * 100, 100) : 0}%;"></div>
+                    </div>
+                    <div class="budget-stats">
+                        <span>R${lifestyleSpent.toFixed(2)}</span>
+                        <span>R${budgets.lifestyle.toFixed(2)}</span>
+                    </div>
+                </div>
+                <div class="budget-item">
+                    <label><i class="fas fa-circle" style="color:#7aa2c6;"></i> Financial</label>
+                    <div class="budget-progress">
+                        <div class="budget-progress-bar financial" style="width:${budgets.financial > 0 ? Math.min((financialSpent / budgets.financial) * 100, 100) : 0}%;"></div>
+                    </div>
+                    <div class="budget-stats">
+                        <span>R${financialSpent.toFixed(2)}</span>
+                        <span>R${budgets.financial.toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
     } catch(e) {}
-}
-
-function updateBudgetItem(category, budget, spent) {
-    const progressEl = document.getElementById(`progress${capitalize(category)}`);
-    if (progressEl) {
-        const percent = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
-        progressEl.style.width = `${percent}%`;
-        progressEl.style.background = percent > 90 ? '#c47060' : percent > 70 ? '#e6b85c' : '#6058a3';
-    }
 }
 
 function capitalize(str) {
@@ -1000,7 +1017,7 @@ function capitalize(str) {
 }
 
 // ============================================
-// PROFILE FUNCTIONS - FIXED
+// PROFILE FUNCTIONS
 // ============================================
 function saveProfile() {
     const name = document.getElementById('profileName').value.trim();
@@ -1052,6 +1069,8 @@ function loadProfile() {
 
 function displayProfile() {
     const container = document.getElementById('profileDisplay');
+    if (!container) return;
+    
     const saved = localStorage.getItem('trackmyfin_profile');
     
     if (!saved) {
@@ -1076,7 +1095,7 @@ function displayProfile() {
 }
 
 // ============================================
-// CUSTOM CATEGORIES - FIXED
+// CUSTOM CATEGORIES
 // ============================================
 function addCustomCategory() {
     const name = document.getElementById('newCategoryName').value.trim();
@@ -1110,6 +1129,8 @@ function addCustomCategory() {
 
 function displayCustomCategories() {
     const container = document.getElementById('customCategoryList');
+    if (!container) return;
+    
     const categories = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
     
     if (categories.length === 0) {
@@ -1160,8 +1181,9 @@ function exportAllData() {
 async function generateReport() {
     const month = document.getElementById('reportMonth').value;
     const container = document.getElementById('reportContent');
+    if (!container) return;
     
-    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Generating AI report...</div>';
+    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Generating report...</div>';
     
     const [year, monthNum] = month.split('-');
     const filtered = transactions.filter(t => {
@@ -1174,7 +1196,6 @@ async function generateReport() {
         return;
     }
     
-    // Calculate totals
     let income = 0, expense = 0;
     let essential = 0, lifestyle = 0, financial = 0;
     
@@ -1191,62 +1212,18 @@ async function generateReport() {
     const remaining = income - expense;
     const topCategory = expense > 0 ? Object.entries({ Essential: essential, Lifestyle: lifestyle, Financial: financial }).sort((a,b) => b[1] - a[1])[0][0] : 'None';
     
-    // Build a summary for the AI
-    const summaryData = {
-        month: month,
-        income: income,
-        expenses: expense,
-        remaining: remaining,
-        categoryBreakdown: { Essential: essential, Lifestyle: lifestyle, Financial: financial },
-        totalTransactions: filtered.length,
-        topCategory: topCategory
-    };
+    const status = remaining >= 0 ? 'within budget' : 'over budget';
+    const advice = remaining >= 0 ? 
+        'Keep up the good work! Consider allocating the extra to savings or debt repayment.' : 
+        'Try to reduce spending on non-essential items to get back on track.';
     
-    // Try to get AI-powered insights
-    let aiInsights = '';
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                description: `Generate a friendly, personalized monthly financial report summary in plain English. 
-                Here is the data for ${month}: 
-                Income: R${income.toFixed(2)}, 
-                Expenses: R${expense.toFixed(2)}, 
-                Remaining: R${remaining.toFixed(2)}, 
-                Category breakdown: Essential R${essential.toFixed(2)}, Lifestyle R${lifestyle.toFixed(2)}, Financial R${financial.toFixed(2)}.
-                Total transactions: ${filtered.length}.
-                Provide 3 actionable recommendations. Keep it encouraging and calm.`
-            })
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            aiInsights = data.summary || '';
-        }
-    } catch(e) {
-        console.log('AI not available, using fallback');
-    }
+    const insights = `You spent R${expense.toFixed(2)} in ${month}, which is ${status}. Your biggest category was ${topCategory}. ${advice}`;
     
-    // Fallback if AI fails
-    if (!aiInsights) {
-        const status = remaining >= 0 ? 'within budget' : 'over budget';
-        const absRemaining = Math.abs(remaining);
-        const advice = remaining >= 0 ? 
-            'Keep up the good work! Consider allocating the extra to savings or debt repayment.' : 
-            'Try to reduce spending on non-essential items to get back on track.';
-        
-        aiInsights = `You spent R${expense.toFixed(2)} in ${month}, which is ${status}. Your biggest category was ${topCategory}. ${advice}`;
-    }
-    
-    // Display the report
     container.innerHTML = `
         <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 20px;">
             <h4 style="color: #4a3a4a;">Financial Summary for ${month}</h4>
             <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 16px; margin: 15px 0;">
-                <p style="font-size: 16px; line-height: 1.8; color: #2c2c2a;">${aiInsights}</p>
+                <p style="font-size: 16px; line-height: 1.8; color: #2c2c2a;">${insights}</p>
             </div>
             
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 15px;">
@@ -1273,7 +1250,9 @@ async function generateReport() {
                 </div>
             </div>
             
-            <button onclick="showToast('Report exported!')" class="btn-secondary" style="margin-top: 15px;"><i class="fas fa-file-pdf"></i> Export PDF</button>
+            <div style="margin-top: 15px; font-size: 11px; color: #888; font-style: italic;">
+                Report based on rule-based analysis. AI-generated summaries are planned for the final submission.
+            </div>
         </div>
     `;
 }
@@ -1326,6 +1305,8 @@ function saveSavingsGoal() {
 
 function displaySavingsGoal() {
     const container = document.getElementById('savingsDisplay');
+    if (!container) return;
+    
     const saved = localStorage.getItem('trackmyfin_savings');
     const progressEl = document.getElementById('savingsProgress');
     const currentEl = document.getElementById('savingsCurrent');
@@ -1387,14 +1368,13 @@ function clearSavingsGoal() {
 }
 
 // ============================================
-// INIT
+// INIT (FIXED - no more errors on other pages)
 // ============================================
 function init() {
-   loadData();
+    loadData();
     loadSampleData();
     updateAll();
     
-    // Only run these if the elements exist on the current page
     if (document.getElementById('transactionList')) {
         addFilterButton();
     }
@@ -1431,6 +1411,7 @@ function init() {
 }
 
 init();
+
 // Force reset function (run in console if needed)
 function forceResetEverything() {
     localStorage.clear();
