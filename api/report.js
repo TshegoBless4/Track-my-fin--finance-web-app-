@@ -97,15 +97,13 @@ Keep the tone encouragement-focused, constructive, concise, and easy to digest. 
         console.warn("OPENROUTER_API_KEY is not defined in Vercel environment variables.");
     }
 
-    // Rule-Based Fallback
-    const ruleBasedSummary = `During ${month}, you brought in R${Number(income).toFixed(2)} in total income against R${Number(expenses).toFixed(2)} in total expenses, leaving you with a net positive balance of R${Number(remaining).toFixed(2)}.
-
-Your primary expense distribution shows R${Number(categories?.Essential || 0).toFixed(2)} spent on Essential needs, R${Number(categories?.Lifestyle || 0).toFixed(2)} on Lifestyle, and R${Number(categories?.Financial || 0).toFixed(2)} toward Financial obligations. Keeping lifestyle costs measured against essential requirements is a great indicator of financial awareness.
-
-To align with your goal of "${userGoal || 'maintaining balance'}", consider allocating at least 20% of your remaining R${Number(remaining).toFixed(2)} (approx. R${(Number(remaining) * 0.2).toFixed(2)}) directly toward savings or debt clearance at the start of the month before discretionary spending begins.`;
-
+    // Diagnostic Fallback Engine
     return res.status(200).json({
-        summary: ruleBasedSummary,
-        source: 'rule-based'
+        summary: `During ${month}, you brought in R${Number(income).toFixed(2)} in total income against R${Number(expenses).toFixed(2)} in total expenses, leaving you with a net balance of R${Number(remaining).toFixed(2)}.`,
+        source: 'rule-based',
+        debug: {
+            hasApiKey: !!OPENROUTER_API_KEY,
+            keyLength: OPENROUTER_API_KEY ? OPENROUTER_API_KEY.trim().length : 0
+        }
     });
 }
