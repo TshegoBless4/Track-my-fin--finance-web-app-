@@ -53,9 +53,11 @@ Paragraph 3: Give 2 actionable recommendations aligned with their primary goal.
 Keep the tone encouragement-focused, constructive, concise, and easy to digest. Use standard text without Markdown formatting headers.`;
 
     const models = [
+       'google/gemini-2.0-flash-lite-preview-02-05:free',
         'meta-llama/llama-3.3-70b-instruct:free',
         'deepseek/deepseek-r1-distill-llama-70b:free',
-        'google/gemini-2.0-flash-lite-preview-02-05:free'
+        'qwen/qwen-2.5-72b-instruct:free',
+        'mistralai/mistral-7b-instruct:free'
     ];
 
     for (const model of models) {
