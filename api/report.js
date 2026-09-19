@@ -5,7 +5,6 @@
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 export default async function handler(req, res) {
-    // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -49,7 +48,7 @@ Keep the tone encouragement-focused, constructive, concise, and easy to digest. 
 
     // Active free model roster on OpenRouter
     const models = [
-       'meta-llama/llama-3.3-70b-instruct:free',
+        'meta-llama/llama-3.3-70b-instruct:free',
         'google/gemini-2.0-flash-exp:free',
         'deepseek/deepseek-r1:free',
         'qwen/qwen-2.5-coder-32b-instruct:free'
@@ -98,7 +97,7 @@ Keep the tone encouragement-focused, constructive, concise, and easy to digest. 
         console.warn("OPENROUTER_API_KEY is not defined in Vercel environment variables.");
     }
 
-    // Guaranteed Rule-Based Fallback Engine
+    // Rule-Based Fallback
     const ruleBasedSummary = `During ${month}, you brought in R${Number(income).toFixed(2)} in total income against R${Number(expenses).toFixed(2)} in total expenses, leaving you with a net positive balance of R${Number(remaining).toFixed(2)}.
 
 Your primary expense distribution shows R${Number(categories?.Essential || 0).toFixed(2)} spent on Essential needs, R${Number(categories?.Lifestyle || 0).toFixed(2)} on Lifestyle, and R${Number(categories?.Financial || 0).toFixed(2)} toward Financial obligations. Keeping lifestyle costs measured against essential requirements is a great indicator of financial awareness.
