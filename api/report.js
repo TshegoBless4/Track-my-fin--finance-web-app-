@@ -28,75 +28,84 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Month parameter is required' });
     }
 
-    if (!OPENROUTER_API_KEY) {
-        return res.status(500).json({ error: 'API key not configured' });
-    }
-
-    const prompt = `You are an empathetic, insightful, and practical personal finance assistant for a user in South Africa.
-Write a personalized 3-paragraph financial report for the month of ${month}.
+    const prompt = `You are a helpful personal finance assistant in South Africa.
+Write a personalized 3-paragraph financial report for ${month}.
 
 Data Summary:
 - Income: R${income}
 - Expenses: R${expenses}
 - Net Balance: R${remaining}
-- Essential Spending: R${categories?.Essential || 0}
-- Lifestyle Spending: R${categories?.Lifestyle || 0}
-- Financial/Debt Spending: R${categories?.Financial || 0}
-- Top Expense Items: ${topTransactions ? topTransactions.map(t => `${t.description} (R${Math.abs(t.amount)})`).join(', ') : 'None'}
-- Primary Goal: ${userGoal || 'Maintain financial health'}
+- Essential: R${categories?.Essential || 0}
+- Lifestyle: R${categories?.Lifestyle || 0}
+- Financial: R${categories?.Financial || 0}
+- Top Expense: ${topTransactions ? topTransactions.map(t => `${t.description} (R${Math.abs(t.amount)})`).join(', ') : 'None'}
+- Goal: ${userGoal || 'Maintain financial health'}
 
-Instructions:
 Paragraph 1: Praise positive habits and give an overall overview of the month.
 Paragraph 2: Highlight key areas where spending was high or where small savings could be made.
 Paragraph 3: Give 2 actionable recommendations aligned with their primary goal.
 
-Keep the tone encouragement-focused, constructive, concise, and easy to digest. Use standard text without Markdown formatting headers.`;
+Keep the tone encouragement-focused, constructive, concise, and easy to digest. Return clean text without Markdown formatting headers.`;
 
+    // Active free model roster on OpenRouter
     const models = [
-       'google/gemini-2.0-flash-lite-preview-02-05:free',
         'meta-llama/llama-3.3-70b-instruct:free',
-        'deepseek/deepseek-r1-distill-llama-70b:free',
         'qwen/qwen-2.5-72b-instruct:free',
         'mistralai/mistral-7b-instruct:free'
     ];
 
-    for (const model of models) {
-        try {
-            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                    'HTTP-Referer': 'https://trackmyfin.vercel.app',
-                    'X-Title': 'Track My Fin',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: model,
-                    messages: [
-                        { role: 'user', content: prompt }
-                    ],
-                    temperature: 0.5
-                })
-            });
+    if (OPENROUTER_API_KEY) {
+        const cleanKey = OPENROUTER_API_KEY.trim();
 
-            if (!response.ok) {
-                console.warn(`Model ${model} failed with status: ${response.status}`);
-                continue;
-            }
-
-            const data = await response.json();
-            const summary = data.choices?.[0]?.message?.content;
-
-            if (summary) {
-                return res.status(200).json({
-                    summary: summary.trim(),
-                    source: 'ai'
+        for (const model of models) {
+            try {
+                const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${cleanKey}`,
+                        'HTTP-Referer': 'https://track-my-fin-finance-web-app.vercel.app',
+                        'X-Title': 'Track My Fin',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [{ role: 'user', content: prompt }],
+                        temperature: 0.5
+                    })
                 });
+
+                if (!response.ok) {
+                    const errBody = await response.text();
+                    console.warn(`Model ${model} failed with status ${response.status}: ${errBody}`);
+                    continue;
+                }
+
+                const data = await response.json();
+                const summary = data.choices?.[0]?.message?.content;
+
+                if (summary) {
+                    return res.status(200).json({
+                        summary: summary.trim(),
+                        source: 'ai'
+                    });
+                }
+            } catch (err) {
+                console.error(`Error querying model ${model}:`, err);
             }
-        } catch (err) {
-            console.error(`Error generating report with model ${model}:`, err);
         }
+    } else {
+        console.warn("OPENROUTER_API_KEY is not defined in Vercel environment variables.");
     }
 
-    return res.status(500).json({ error: 'All AI models failed to generate report' });
+    // Guaranteed Rule-Based Fallback Engine
+    const ruleBasedSummary = `During ${month}, you brought in R${Number(income).toFixed(2)} in total income against R${Number(expenses).toFixed(2)} in total expenses, leaving you with a net positive balance of R${Number(remaining).toFixed(2)}.
+
+Your primary expense distribution shows R${Number(categories?.Essential || 0).toFixed(2)} spent on Essential needs, R${Number(categories?.Lifestyle || 0).toFixed(2)} on Lifestyle, and R${Number(categories?.Financial || 0).toFixed(2)} toward Financial obligations. Keeping lifestyle costs measured against essential requirements is a great indicator of financial awareness.
+
+To align with your goal of "${userGoal || 'maintaining balance'}", consider allocating at least 20% of your remaining R${Number(remaining).toFixed(2)} (approx. R${(Number(remaining) * 0.2).toFixed(2)}) directly toward savings or debt clearance at the start of the month before discretionary spending begins.`;
+
+    return res.status(200).json({
+        summary: ruleBasedSummary,
+        source: 'rule-based'
+    });
 }
