@@ -11,31 +11,39 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // ============================================
-    // HANDLE PREFLIGHT (OPTIONS) REQUEST
-    // ============================================
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
-    // ============================================
-    // ONLY ACCEPT POST REQUESTS
-    // ============================================
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
     // ============================================
-    // GET TRANSACTION DATA FROM REQUEST
+    // GET TRANSACTION DATA
     // ============================================
-    const { description, amount } = req.body;
+    const { description, amount, type } = req.body;
 
     if (!description) {
         return res.status(400).json({ error: 'Description is required' });
     }
 
     // ============================================
-    // GET API KEY FROM ENVIRONMENT VARIABLES
+    // RULE 1: INCOME SHORT-CIRCUIT
+    // Money coming in is ALWAYS Income. No AI needed.
+    // ============================================
+    if (type === 'income') {
+        return res.status(200).json({
+            category: 'Income',
+            confidence: 0.95,
+            source: 'ai'
+        });
+    }
+
+    // ============================================
+    // RULE 2: FOR EXPENSES, THE AI ONLY CHOOSES
+    // BETWEEN Essential, Lifestyle, OR Financial.
+    // Income is never a valid answer here.
     // ============================================
     const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
@@ -44,13 +52,11 @@ export default async function handler(req, res) {
         return res.status(200).json({
             category: 'Lifestyle',
             confidence: 0.3,
-            note: 'Server configuration error: missing API key'
+            note: 'Server configuration error: missing API key',
+            source: 'fallback'
         });
     }
 
-    // ============================================
-    // CALL OPENROUTER API
-    // ============================================
     try {
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
@@ -61,33 +67,33 @@ export default async function handler(req, res) {
                 'X-Title': 'Track My Fin'
             },
             body: JSON.stringify({
-              model: 'nex-agi/nex-n2.5-mini:free',
+                model: 'nex-agi/nex-n2.5-mini:free',
                 messages: [
                     {
                         role: 'system',
                         content: `You are a financial categorizer for South African users.
-Return ONLY one word from this list: Essential, Lifestyle, Financial, or Income.
 
-Essential = rent, groceries, Checkers, Pick n Pay, Shoprite, Woolworths food, medication, utilities, electricity, water, medical aid, school fees, transport, petrol, fuel
-Lifestyle = restaurant, Uber, Bolt, Netflix, Spotify, DStv, coffee, takeaway, shopping, mall, clothing, entertainment, movies
-Financial = bank fees, Capitec, FNB, Nedbank, Standard Bank, ABSA, insurance, loan, credit card, interest
-Income = salary, deposit, payment received, freelance, stipend, allowance, refund
+You categorize EXPENSES only. The user has already told you that this transaction is money going OUT.
 
-Do not explain. Do not add extra words. Return only the single category word.`
+You must return exactly ONE of these three words:
+- Essential (groceries, rent, medication, utilities, transport, school fees, petrol, electricity, water)
+- Lifestyle (dining, coffee, takeout, streaming, shopping, entertainment, clothing, hobbies)
+- Financial (bank fees, insurance, loans, credit cards, interest, account fees)
+
+Do NOT return "Income". This is an expense, not income.
+Do NOT explain. Do NOT add punctuation. Do NOT add quotes.
+Return one word only: Essential, Lifestyle, or Financial.`
                     },
                     {
                         role: 'user',
-                        content: `Categorize this transaction: "${description}" for R${Math.abs(amount || 0)}`
+                        content: `Expense description: "${description}" for R${Math.abs(amount || 0)}`
                     }
                 ],
                 temperature: 0.1,
-                max_tokens: 10
+                max_tokens: 5
             })
         });
 
-        // ============================================
-        // CHECK FOR API ERRORS
-        // ============================================
         if (!response.ok) {
             const errorText = await response.text();
             console.error('OpenRouter API error:', response.status, errorText);
@@ -96,47 +102,70 @@ Do not explain. Do not add extra words. Return only the single category word.`
                 confidence: 0.3,
                 note: 'API error, using fallback',
                 debug_status: response.status,
-                debug_details: errorText
+                source: 'fallback'
             });
         }
 
         const data = await response.json();
 
         // ============================================
-        // PARSE THE RESPONSE
+        // EXTRACT RAW TEXT FROM ANY SHAPE
         // ============================================
         let rawText = '';
-        try {
-            rawText = data.choices[0].message.content.trim();
-        } catch (e) {
-            console.error('Unexpected response shape:', JSON.stringify(data));
+
+        if (data && data.choices && data.choices[0]) {
+            const choice = data.choices[0];
+            if (choice.message && typeof choice.message.content === 'string') {
+                rawText = choice.message.content;
+            } else if (choice.message && typeof choice.message.content === 'object') {
+                rawText = JSON.stringify(choice.message.content);
+            } else if (typeof choice.text === 'string') {
+                rawText = choice.text;
+            } else if (typeof choice.content === 'string') {
+                rawText = choice.content;
+            }
+        }
+
+        if (!rawText || rawText.length === 0) {
+            console.error('Empty AI response:', JSON.stringify(data).substring(0, 500));
             return res.status(200).json({
                 category: 'Lifestyle',
-                 note: 'Unexpected AI response',
-        debug_full_response: JSON.stringify(data).substring(0, 800)
+                confidence: 0.3,
+                note: 'Empty AI response',
+                source: 'fallback'
             });
         }
 
-        // Extract just the category word from the response
-        const validCategories = ['Essential', 'Lifestyle', 'Financial', 'Income'];
-        let category = 'Lifestyle';
-        let matched = false;
+        // ============================================
+        // FIND A VALID EXPENSE CATEGORY
+        // Note: Income is NOT valid here
+        // ============================================
+        const validCategories = ['Essential', 'Lifestyle', 'Financial'];
+        let matchedCategory = null;
 
         for (const valid of validCategories) {
-            if (rawText.toLowerCase().includes(valid.toLowerCase())) {
-                category = valid;
-                matched = true;
+            const regex = new RegExp(`\\b${valid}\\b`, 'i');
+            if (regex.test(rawText)) {
+                matchedCategory = valid;
                 break;
             }
         }
 
-        // ============================================
-        // RETURN SUCCESSFUL RESPONSE
-        // ============================================
+        if (matchedCategory) {
+            return res.status(200).json({
+                category: matchedCategory,
+                confidence: 0.85,
+                source: 'ai'
+            });
+        }
+
+        console.error('Could not extract category from AI text:', rawText.substring(0, 200));
         return res.status(200).json({
-            category: category,
-            confidence: matched ? 0.85 : 0.4,
-            source: 'ai'
+            category: 'Lifestyle',
+            confidence: 0.4,
+            note: 'Could not parse AI response',
+            debug_raw_text: rawText.substring(0, 200),
+            source: 'fallback'
         });
 
     } catch (error) {
@@ -144,8 +173,8 @@ Do not explain. Do not add extra words. Return only the single category word.`
         return res.status(200).json({
             category: 'Lifestyle',
             confidence: 0.3,
-            note: 'Server error, using fallback',
-            debug_details: String(error)
+            note: 'Server error',
+            source: 'fallback'
         });
     }
 }

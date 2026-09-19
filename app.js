@@ -1,23 +1,24 @@
 // ============================================
 // TRACK MY FIN - COMPLETE APP
-// ALL MUST-HAVE FEATURES WORKING
 // ============================================
 
 // ============================================
-// API CONFIGURATION (FIXED - RELATIVE URL)
+// API CONFIGURATION
 // ============================================
 const isLocal = window.location.hostname === 'localhost' || 
                 window.location.hostname === '127.0.0.1';
 
-// Use a RELATIVE path so the browser always calls the API on the same domain.
-// This eliminates CORS errors because the request is now same-origin.
 const VERCEL_PROXY_URL = '/api/categorize';
+const VERCEL_REPORT_URL = '/api/report';
 const LOCAL_PROXY_URL = 'http://localhost:3000/api/categorize';
+const LOCAL_REPORT_URL = 'http://localhost:3000/api/report';
 
 const API_URL = isLocal ? LOCAL_PROXY_URL : VERCEL_PROXY_URL;
+const REPORT_URL = isLocal ? LOCAL_REPORT_URL : VERCEL_REPORT_URL;
 let USE_REAL_API = true;
 
-console.log('Using API URL:', API_URL);
+console.log('Using categorize URL:', API_URL);
+console.log('Using report URL:', REPORT_URL);
 
 // ============================================
 // DATA STORAGE
@@ -43,9 +44,33 @@ function saveData() {
 }
 
 // ============================================
-// AI API CALL - USING VERCEL PROXY
+// CATEGORY HELPERS
 // ============================================
-async function categorizeWithAPI(description, amount) {
+function getAllCategories() {
+    const defaults = ['Essential', 'Lifestyle', 'Financial', 'Income'];
+    const custom = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]')
+        .map(c => c.name);
+    return [...defaults, ...custom];
+}
+
+function getCategoryColor(categoryName) {
+    const defaultColors = {
+        'Essential': '#6058a3',
+        'Lifestyle': '#b271af',
+        'Financial': '#7aa2c6',
+        'Income': '#6a8a6a'
+    };
+    if (defaultColors[categoryName]) return defaultColors[categoryName];
+    
+    const custom = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
+    const match = custom.find(c => c.name === categoryName);
+    return match ? match.color : '#888888';
+}
+
+// ============================================
+// AI CATEGORIZATION CALL
+// ============================================
+async function categorizeWithAPI(description, amount, type) {
     if (!USE_REAL_API) return null;
     
     try {
@@ -56,7 +81,8 @@ async function categorizeWithAPI(description, amount) {
             },
             body: JSON.stringify({
                 description: description,
-                amount: amount
+                amount: amount,
+                type: type || 'expense'
             })
         });
         
@@ -83,7 +109,11 @@ async function categorizeWithAPI(description, amount) {
 // ============================================
 // KEYWORD FALLBACK
 // ============================================
-function categorizeWithKeywords(description) {
+function categorizeWithKeywords(description, type) {
+    if (type === 'income') {
+        return { category: 'Income', confidence: 0.9 };
+    }
+    
     const desc = description.toLowerCase();
     
     if (desc.includes('salary') || desc.includes('deposit') || 
@@ -132,19 +162,28 @@ function needsReview(confidence, description) {
 // ============================================
 // MAIN CATEGORIZATION
 // ============================================
-async function categorizeTransaction(description, amount) {
+async function categorizeTransaction(description, amount, type) {
+    if (type === 'income') {
+        return {
+            category: 'Income',
+            confidence: 0.95,
+            needsReview: false,
+            source: 'ai'
+        };
+    }
+    
     let result;
     
     if (USE_REAL_API) {
-        const apiResult = await categorizeWithAPI(description, amount);
+        const apiResult = await categorizeWithAPI(description, amount, type);
         if (apiResult) {
             result = apiResult;
         } else {
-            result = categorizeWithKeywords(description);
+            result = categorizeWithKeywords(description, type);
             result.source = 'fallback';
         }
     } else {
-        result = categorizeWithKeywords(description);
+        result = categorizeWithKeywords(description, type);
         result.source = 'fallback';
     }
     
@@ -222,7 +261,7 @@ async function addTransaction() {
     addBtn.innerText = 'Analyzing...';
     addBtn.disabled = true;
     
-    const result = await categorizeTransaction(description, amount);
+    const result = await categorizeTransaction(description, amount, type);
     
     transactions.unshift({
         id: Date.now(),
@@ -311,7 +350,8 @@ async function uploadCSV() {
                 
                 if (!isNaN(amount) && description) {
                     let formattedDate = formatDate(rawDate);
-                    const result = await categorizeTransaction(description, amount);
+                    const txnType = amount > 0 ? 'income' : 'expense';
+                    const result = await categorizeTransaction(description, amount, txnType);
                     
                     transactions.unshift({
                         id: Date.now() + i,
@@ -452,10 +492,9 @@ function showPendingReviews() {
                         <p>Amount: R${Math.abs(t.amount).toFixed(2)} | Confidence: ${Math.round(t.confidence * 100)}%</p>
                         <p>Suggested: <strong>${t.category}</strong></p>
                         <select id="cat-${t.id}" style="padding: 8px; border-radius: 40px; margin-top: 8px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: #2c2c2a;">
-                            <option ${t.category === 'Essential' ? 'selected' : ''}>Essential</option>
-                            <option ${t.category === 'Lifestyle' ? 'selected' : ''}>Lifestyle</option>
-                            <option ${t.category === 'Financial' ? 'selected' : ''}>Financial</option>
-                            <option ${t.category === 'Income' ? 'selected' : ''}>Income</option>
+                            ${getAllCategories().map(cat => 
+                                `<option ${t.category === cat ? 'selected' : ''}>${cat}</option>`
+                            ).join('')}
                         </select>
                         <button onclick="approveTransaction(${t.id})" style="margin-left: 10px; padding: 6px 18px; background: linear-gradient(135deg, #6058a3 0%, #4a4283 100%); color: white; border: none; border-radius: 40px; cursor: pointer;">Approve</button>
                     </div>
@@ -610,63 +649,65 @@ function updateTransactionList() {
         return;
     }
     
-    container.innerHTML = filtered.map(t => {
-        const sourceBadge = t.source === 'ai' 
-            ? '<span style="background:#6058a3; color:white; padding:2px 8px; border-radius:12px; font-size:9px;">AI</span>' 
-            : t.source === 'fallback' 
-            ? '<span style="background:#c47060; color:white; padding:2px 8px; border-radius:12px; font-size:9px;">RULES</span>' 
-            : '';
-        
-        return `
+    container.innerHTML = filtered.map(t => `
         <div class="transaction-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.2); flex-wrap: wrap; gap: 8px; background: rgba(255,255,255,0.12); backdrop-filter: blur(8px); border-radius: 24px; margin-bottom: 10px;">
             <span style="min-width: 100px; font-size: 12px; color: #888;">${t.date}</span>
-            <span style="flex: 2; font-weight: 500; color: #2c2c2a;">${escapeHtml(t.description.substring(0, 40))} ${sourceBadge}</span>
+            <span style="flex: 2; font-weight: 500; color: #2c2c2a;">${escapeHtml(t.description.substring(0, 40))}</span>
             <span style="min-width: 100px; text-align: right; font-weight: 600; color: ${t.amount > 0 ? '#6a8a6a' : '#c47060'}">
                 ${t.amount > 0 ? '+' : ''}R${Math.abs(t.amount).toFixed(2)}
             </span>
             <select onchange="updateTransactionCategory(${t.id}, this.value)" style="padding: 5px 12px; border-radius: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: #2c2c2a;">
-                <option ${t.category === 'Essential' ? 'selected' : ''}>Essential</option>
-                <option ${t.category === 'Lifestyle' ? 'selected' : ''}>Lifestyle</option>
-                <option ${t.category === 'Financial' ? 'selected' : ''}>Financial</option>
-                <option ${t.category === 'Income' ? 'selected' : ''}>Income</option>
+                ${getAllCategories().map(cat => 
+                    `<option ${t.category === cat ? 'selected' : ''}>${cat}</option>`
+                ).join('')}
             </select>
             ${t.needsReview && !t.reviewed ? '<span style="background: #f4b1b4; color: #4a3a4a; padding:2px 10px; border-radius: 20px; font-size:10px;"><i class="fas fa-flag"></i> Needs Review</span>' : ''}
-            ${t.reviewed && t.source === 'user_reviewed' ? '<span style="font-size:10px; color: #6058a3;"><i class="fas fa-check"></i> Reviewed</span>' : ''}
         </div>
-    `}).join('');
+    `).join('');
 }
 
 function updateChart() {
     const canvas = document.getElementById('categoryChart');
     if (!canvas) return;
-    
-    let essential = 0, lifestyle = 0, financial = 0;
+
+    const totals = {};
     transactions.forEach(t => {
         if (t.amount < 0) {
-            if (t.category === 'Essential') essential += Math.abs(t.amount);
-            else if (t.category === 'Lifestyle') lifestyle += Math.abs(t.amount);
-            else if (t.category === 'Financial') financial += Math.abs(t.amount);
-            else lifestyle += Math.abs(t.amount);
+            const cat = t.category || 'Uncategorised';
+            totals[cat] = (totals[cat] || 0) + Math.abs(t.amount);
         }
     });
-    
-    const essentialEl = document.getElementById('essentialAmount');
-    const lifestyleEl = document.getElementById('lifestyleAmount');
-    const financialEl = document.getElementById('financialAmount');
-    if (essentialEl) essentialEl.innerHTML = `R${essential.toFixed(2)}`;
-    if (lifestyleEl) lifestyleEl.innerHTML = `R${lifestyle.toFixed(2)}`;
-    if (financialEl) financialEl.innerHTML = `R${financial.toFixed(2)}`;
-    
+
+    const labels = Object.keys(totals);
+    const values = labels.map(k => totals[k]);
+    const colours = labels.map(getCategoryColor);
+
+    const breakdownEl = document.getElementById('breakdownList');
+    if (breakdownEl) {
+        if (labels.length === 0) {
+            breakdownEl.innerHTML = '<p style="color:#888;">No spending yet.</p>';
+        } else {
+            breakdownEl.innerHTML = labels.map((cat, i) => `
+                <div class="breakdown-item">
+                    <span class="breakdown-label">
+                        <i class="fas fa-circle" style="color:${colours[i]};"></i> ${escapeHtml(cat)}
+                    </span>
+                    <span class="breakdown-amount">R${values[i].toFixed(2)}</span>
+                </div>
+            `).join('');
+        }
+    }
+
     const ctx = canvas.getContext('2d');
     if (categoryChart) categoryChart.destroy();
-    
+
     categoryChart = new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: ['Essential', 'Lifestyle', 'Financial'],
+            labels: labels.length ? labels : ['No data'],
             datasets: [{
-                data: [essential, lifestyle, financial],
-                backgroundColor: ['#6058a3', '#b271af', '#7aa2c6'],
+                data: values.length ? values : [1],
+                backgroundColor: colours.length ? colours : ['#ccc'],
                 borderWidth: 0
             }]
         },
@@ -705,7 +746,7 @@ function addFilterButton() {
 }
 
 // ============================================
-// SAMPLE DATA - FIXED (only loads once)
+// SAMPLE DATA
 // ============================================
 function loadSampleData() {
     if (localStorage.getItem(SAMPLE_DATA_KEY) === 'true') {
@@ -1012,10 +1053,6 @@ function updateBudgetDisplay() {
     } catch(e) {}
 }
 
-function capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
 // ============================================
 // PROFILE FUNCTIONS
 // ============================================
@@ -1122,6 +1159,7 @@ function addCustomCategory() {
     
     localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(categories));
     displayCustomCategories();
+    updateAll();
     showToast(`Category "${name}" added!`);
     
     document.getElementById('newCategoryName').value = '';
@@ -1152,6 +1190,7 @@ function removeCustomCategory(index) {
     categories.splice(index, 1);
     localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(categories));
     displayCustomCategories();
+    updateAll();
     showToast(`Category "${removed}" removed`);
 }
 
@@ -1183,7 +1222,7 @@ async function generateReport() {
     const container = document.getElementById('reportContent');
     if (!container) return;
     
-    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Generating report...</div>';
+    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> AI is writing your report...</div>';
     
     const [year, monthNum] = month.split('-');
     const filtered = transactions.filter(t => {
@@ -1196,6 +1235,9 @@ async function generateReport() {
         return;
     }
     
+    // ============================================
+    // CALCULATE HARD NUMBERS LOCALLY
+    // ============================================
     let income = 0, expense = 0;
     let essential = 0, lifestyle = 0, financial = 0;
     
@@ -1210,49 +1252,111 @@ async function generateReport() {
     });
     
     const remaining = income - expense;
-    const topCategory = expense > 0 ? Object.entries({ Essential: essential, Lifestyle: lifestyle, Financial: financial }).sort((a,b) => b[1] - a[1])[0][0] : 'None';
     
-    const status = remaining >= 0 ? 'within budget' : 'over budget';
-    const advice = remaining >= 0 ? 
-        'Keep up the good work! Consider allocating the extra to savings or debt repayment.' : 
-        'Try to reduce spending on non-essential items to get back on track.';
+    // Top 3 biggest expenses
+    const topTransactions = filtered
+        .filter(t => t.amount < 0)
+        .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+        .slice(0, 3)
+        .map(t => ({ description: t.description, amount: t.amount }));
     
-    const insights = `You spent R${expense.toFixed(2)} in ${month}, which is ${status}. Your biggest category was ${topCategory}. ${advice}`;
+    // Get user's goal from profile
+    let userGoal = 'Not specified';
+    try {
+        const profile = JSON.parse(localStorage.getItem('trackmyfin_profile') || 'null');
+        if (profile && profile.goal) userGoal = profile.goal;
+    } catch(e) {}
+    
+    // ============================================
+    // CALL THE AI REPORT ENDPOINT
+    // ============================================
+    let aiSummary = null;
+    let usedFallback = false;
+    
+    try {
+        const response = await fetch(REPORT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                month: month,
+                income: income,
+                expenses: expense,
+                remaining: remaining,
+                categories: {
+                    Essential: essential,
+                    Lifestyle: lifestyle,
+                    Financial: financial
+                },
+                topTransactions: topTransactions,
+                userGoal: userGoal
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.source === 'ai' && data.summary) {
+                aiSummary = data.summary;
+            }
+        }
+    } catch(e) {
+        console.error('Report API error:', e);
+    }
+    
+    if (!aiSummary) usedFallback = true;
+    
+    // ============================================
+    // RENDER THE REPORT
+    // ============================================
+    const headerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">
+            <h4 style="color: #4a3a4a; margin: 0;">Financial Summary for ${month}</h4>
+            <span style="font-size: 11px; padding: 3px 10px; border-radius: 20px; background: ${usedFallback ? '#f4b1b4' : '#d4e4d4'}; color: #4a3a4a;">
+                ${usedFallback ? 'Basic summary' : 'AI-generated'}
+            </span>
+        </div>
+    `;
+    
+    const bodyHTML = aiSummary 
+        ? `<div style="background: rgba(255,255,255,0.15); padding: 18px; border-radius: 16px; margin: 15px 0; white-space: pre-wrap; line-height: 1.8; color: #2c2c2a;">${escapeHtml(aiSummary)}</div>`
+        : `<div style="background: rgba(255,255,255,0.15); padding: 18px; border-radius: 16px; margin: 15px 0; line-height: 1.8; color: #2c2c2a;">
+                <p><em>AI report is not available right now. Here is a basic summary of your month.</em></p>
+                <p>You spent R${expense.toFixed(2)} in ${month}. Your remaining balance was R${remaining.toFixed(2)}, which means you are ${remaining >= 0 ? 'within budget' : 'over budget'}.</p>
+           </div>`;
+    
+    const categoryHTML = `
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+            <p><strong>Category Breakdown:</strong></p>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 8px;">
+                <span><i class="fas fa-circle" style="color:#6058a3;"></i> Essential: R${essential.toFixed(2)} (${expense > 0 ? Math.round((essential/expense)*100) : 0}%)</span>
+                <span><i class="fas fa-circle" style="color:#b271af;"></i> Lifestyle: R${lifestyle.toFixed(2)} (${expense > 0 ? Math.round((lifestyle/expense)*100) : 0}%)</span>
+                <span><i class="fas fa-circle" style="color:#7aa2c6;"></i> Financial: R${financial.toFixed(2)} (${expense > 0 ? Math.round((financial/expense)*100) : 0}%)</span>
+            </div>
+        </div>
+    `;
+    
+    const numbersHTML = `
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 15px;">
+            <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; text-align: center;">
+                <p style="font-size: 12px; color: #888;">Income</p>
+                <p style="font-weight: 700; color: #6a8a6a;">R${income.toFixed(2)}</p>
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; text-align: center;">
+                <p style="font-size: 12px; color: #888;">Expenses</p>
+                <p style="font-weight: 700; color: #c47060;">R${expense.toFixed(2)}</p>
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; text-align: center;">
+                <p style="font-size: 12px; color: #888;">Remaining</p>
+                <p style="font-weight: 700; color: ${remaining >= 0 ? '#6a8a6a' : '#c47060'};">R${remaining.toFixed(2)}</p>
+            </div>
+        </div>
+    `;
     
     container.innerHTML = `
         <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 20px;">
-            <h4 style="color: #4a3a4a;">Financial Summary for ${month}</h4>
-            <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 16px; margin: 15px 0;">
-                <p style="font-size: 16px; line-height: 1.8; color: #2c2c2a;">${insights}</p>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 15px;">
-                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; text-align: center;">
-                    <p style="font-size: 12px; color: #888;">Income</p>
-                    <p style="font-weight: 700; color: #6a8a6a;">R${income.toFixed(2)}</p>
-                </div>
-                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; text-align: center;">
-                    <p style="font-size: 12px; color: #888;">Expenses</p>
-                    <p style="font-weight: 700; color: #c47060;">R${expense.toFixed(2)}</p>
-                </div>
-                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; text-align: center;">
-                    <p style="font-size: 12px; color: #888;">Remaining</p>
-                    <p style="font-weight: 700; color: ${remaining >= 0 ? '#6a8a6a' : '#c47060'};">R${remaining.toFixed(2)}</p>
-                </div>
-            </div>
-            
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
-                <p><strong>Category Breakdown:</strong></p>
-                <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 8px;">
-                    <span><i class="fas fa-circle" style="color:#6058a3;"></i> Essential: R${essential.toFixed(2)} (${expense > 0 ? Math.round((essential/expense)*100) : 0}%)</span>
-                    <span><i class="fas fa-circle" style="color:#b271af;"></i> Lifestyle: R${lifestyle.toFixed(2)} (${expense > 0 ? Math.round((lifestyle/expense)*100) : 0}%)</span>
-                    <span><i class="fas fa-circle" style="color:#7aa2c6;"></i> Financial: R${financial.toFixed(2)} (${expense > 0 ? Math.round((financial/expense)*100) : 0}%)</span>
-                </div>
-            </div>
-            
-            <div style="margin-top: 15px; font-size: 11px; color: #888; font-style: italic;">
-                Report based on rule-based analysis. AI-generated summaries are planned for the final submission.
-            </div>
+            ${headerHTML}
+            ${bodyHTML}
+            ${numbersHTML}
+            ${categoryHTML}
         </div>
     `;
 }
@@ -1368,7 +1472,7 @@ function clearSavingsGoal() {
 }
 
 // ============================================
-// INIT (FIXED - no more errors on other pages)
+// INIT
 // ============================================
 function init() {
     loadData();
