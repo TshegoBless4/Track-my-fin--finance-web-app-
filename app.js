@@ -243,10 +243,16 @@ function formatDate(rawDate) {
 // ============================================
 // ADD MANUAL TRANSACTION
 // ============================================
-async function addTransaction() {
-    const description = document.getElementById('descInput').value.trim();
-    let amount = parseFloat(document.getElementById('amountInput').value);
-    const type = document.getElementById('typeSelect').value;
+async function addTransaction(event) {
+    const descEl = document.getElementById('descInput');
+    const amountEl = document.getElementById('amountInput');
+    const typeEl = document.getElementById('typeSelect');
+    
+    if (!descEl || !amountEl || !typeEl) return;
+
+    const description = descEl.value.trim();
+    let amount = parseFloat(amountEl.value);
+    const type = typeEl.value;
     
     if (!description || isNaN(amount) || amount === 0) {
         alert('Please enter a valid description and amount');
@@ -256,10 +262,13 @@ async function addTransaction() {
     if (type === 'expense' && amount > 0) amount = -amount;
     if (type === 'income' && amount < 0) amount = Math.abs(amount);
     
-    const addBtn = event.target;
-    const originalText = addBtn.innerText;
-    addBtn.innerText = 'Analyzing...';
-    addBtn.disabled = true;
+    const addBtn = event ? event.target : null;
+    let originalText = 'Add';
+    if (addBtn) {
+        originalText = addBtn.innerText;
+        addBtn.innerText = 'Analyzing...';
+        addBtn.disabled = true;
+    }
     
     const result = await categorizeTransaction(description, amount, type);
     
@@ -278,8 +287,10 @@ async function addTransaction() {
     saveData();
     updateAll();
     
-    addBtn.innerText = originalText;
-    addBtn.disabled = false;
+    if (addBtn) {
+        addBtn.innerText = originalText;
+        addBtn.disabled = false;
+    }
     
     if (result.needsReview) {
         showToast(`Transaction "${description.substring(0, 30)}" needs review (${Math.round(result.confidence*100)}% confidence)`, 'warning');
@@ -288,8 +299,20 @@ async function addTransaction() {
         showToast(`Added: ${description.substring(0, 30)} → ${result.category}`, 'success');
     }
     
-    document.getElementById('descInput').value = '';
-    document.getElementById('amountInput').value = '';
+    descEl.value = '';
+    amountEl.value = '';
+}
+
+// ============================================
+// DELETE SINGLE TRANSACTION
+// ============================================
+function deleteTransaction(id) {
+    if (confirm('Are you sure you want to delete this transaction?')) {
+        transactions = transactions.filter(t => t.id !== id);
+        saveData();
+        updateAll();
+        showToast('Transaction deleted', 'success');
+    }
 }
 
 // ============================================
@@ -297,8 +320,9 @@ async function addTransaction() {
 // ============================================
 async function uploadCSV() {
     const fileInput = document.getElementById('csvFile');
-    const file = fileInput.files[0];
+    if (!fileInput) return;
     
+    const file = fileInput.files[0];
     if (!file) {
         alert('Please select a CSV file');
         return;
@@ -439,7 +463,13 @@ function showReviewBanner(count) {
         `;
         const container = document.querySelector('.container');
         const summaryCards = document.querySelector('.summary-cards');
-        container.insertBefore(banner, summaryCards);
+        if (container && summaryCards) {
+            container.insertBefore(banner, summaryCards);
+        } else if (container) {
+            container.prepend(banner);
+        } else {
+            return;
+        }
     }
     
     banner.innerHTML = `
@@ -513,8 +543,9 @@ function showPendingReviews() {
 function approveTransaction(id) {
     const transaction = transactions.find(t => t.id === id);
     if (transaction) {
-        const newCategory = document.getElementById(`cat-${id}`).value;
-        transaction.category = newCategory;
+        const catSelect = document.getElementById(`cat-${id}`);
+        if (catSelect) transaction.category = catSelect.value;
+        
         transaction.needsReview = false;
         transaction.reviewed = true;
         transaction.source = 'user_reviewed';
@@ -567,7 +598,6 @@ function updateTransactionCategory(id, newCategory) {
         saveData();
         updateAll();
         showToast('Category updated', 'success');
-        hideReviewBanner();
     }
 }
 
@@ -596,7 +626,7 @@ function toggleShowPending() {
     if (btn) {
         btn.style.background = showOnlyPending ? '#c47060' : '#6058a3';
         btn.innerText = showOnlyPending ? 'Show All' : 'Show Pending Only';
-        btn.style.color = showOnlyPending ? 'white' : 'white';
+        btn.style.color = 'white';
     }
 }
 
@@ -615,6 +645,26 @@ function updateAll() {
     } else {
         hideReviewBanner();
     }
+}
+
+function updateSummary() {
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    transactions.forEach(t => {
+        if (t.amount > 0) totalIncome += t.amount;
+        else totalExpense += Math.abs(t.amount);
+    });
+
+    const net = totalIncome - totalExpense;
+
+    const incomeEl = document.getElementById('totalIncome');
+    const expenseEl = document.getElementById('totalExpenses');
+    const netEl = document.getElementById('netBalance');
+
+    if (incomeEl) incomeEl.innerText = `R${totalIncome.toFixed(2)}`;
+    if (expenseEl) expenseEl.innerText = `R${totalExpense.toFixed(2)}`;
+    if (netEl) netEl.innerText = `R${net.toFixed(2)}`;
 }
 
 function updateChart() {
@@ -654,6 +704,8 @@ function updateChart() {
                 `).join('');
         }
     }
+
+    if (typeof Chart === 'undefined') return;
 
     const ctx = canvas.getContext('2d');
     if (categoryChart) {
@@ -723,69 +775,13 @@ function updateTransactionList() {
                 ).join('')}
             </select>
             ${t.needsReview && !t.reviewed ? '<span style="background: #f4b1b4; color: #4a3a4a; padding:2px 10px; border-radius: 20px; font-size:10px;"><i class="fas fa-flag"></i> Needs Review</span>' : ''}
+            <button onclick="deleteTransaction(${t.id})" style="background: rgba(200, 100, 100, 0.2); border: 1px solid rgba(200, 100, 100, 0.4); color: #c47060; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="fas fa-trash-alt" style="font-size: 11px;"></i></button>
         </div>
     `).join('');
 }
 
-function updateChart() {
-    const canvas = document.getElementById('categoryChart');
-    if (!canvas) return;
-
-    const totals = {};
-    transactions.forEach(t => {
-        if (t.amount < 0) {
-            const cat = t.category || 'Uncategorised';
-            totals[cat] = (totals[cat] || 0) + Math.abs(t.amount);
-        }
-    });
-
-    const labels = Object.keys(totals);
-    const values = labels.map(k => totals[k]);
-    const colours = labels.map(getCategoryColor);
-
-    const breakdownEl = document.getElementById('breakdownList');
-    if (breakdownEl) {
-        if (labels.length === 0) {
-            breakdownEl.innerHTML = '<p style="color:#888;">No spending yet.</p>';
-        } else {
-            breakdownEl.innerHTML = labels.map((cat, i) => `
-                <div class="breakdown-item">
-                    <span class="breakdown-label">
-                        <i class="fas fa-circle" style="color:${colours[i]};"></i> ${escapeHtml(cat)}
-                    </span>
-                    <span class="breakdown-amount">R${values[i].toFixed(2)}</span>
-                </div>
-            `).join('');
-        }
-    }
-
-    const ctx = canvas.getContext('2d');
-    if (categoryChart) categoryChart.destroy();
-
-    categoryChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: labels.length ? labels : ['No data'],
-            datasets: [{
-                data: values.length ? values : [1],
-                backgroundColor: colours.length ? colours : ['#ccc'],
-                borderWidth: 0
-            }]
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: true, 
-            plugins: { 
-                legend: { 
-                    position: 'bottom', 
-                    labels: { color: '#4a3a4a' } 
-                } 
-            } 
-        }
-    });
-}
-
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
@@ -802,7 +798,7 @@ function addFilterButton() {
         btn.innerText = 'Show Pending Only';
         btn.style.cssText = 'background: #6058a3; color: white; padding: 6px 16px; font-size: 12px; border-radius: 30px; margin-right: 10px; border: none; cursor: pointer;';
         btn.onclick = toggleShowPending;
-        filterContainer.insertBefore(btn, filterContainer.children[1]);
+        filterContainer.insertBefore(btn, filterContainer.children[1] || null);
     }
 }
 
@@ -845,8 +841,12 @@ function loadSampleData() {
 // MULTIPLE GOALS
 // ============================================
 function saveGoal() {
-    const goalType = document.getElementById('goalType').value;
-    const goalAmount = document.getElementById('goalAmount').value;
+    const goalTypeEl = document.getElementById('goalType');
+    const goalAmountEl = document.getElementById('goalAmount');
+    if (!goalTypeEl || !goalAmountEl) return;
+
+    const goalType = goalTypeEl.value;
+    const goalAmount = goalAmountEl.value;
     
     if (!goalAmount || goalAmount <= 0) {
         alert('Please enter a valid target amount');
@@ -865,7 +865,7 @@ function saveGoal() {
     localStorage.setItem('trackmyfin_goals', JSON.stringify(goals));
     displayGoals();
     showToast('Goal added successfully!');
-    document.getElementById('goalAmount').value = '';
+    goalAmountEl.value = '';
 }
 
 function displayGoals() {
@@ -919,9 +919,14 @@ function clearAllGoals() {
 // DEBT FUNCTIONS
 // ============================================
 function addDebt() {
-    const name = document.getElementById('debtName').value.trim();
-    const balance = parseFloat(document.getElementById('debtBalance').value);
-    const rate = parseFloat(document.getElementById('debtRate').value);
+    const nameEl = document.getElementById('debtName');
+    const balanceEl = document.getElementById('debtBalance');
+    const rateEl = document.getElementById('debtRate');
+    if (!nameEl || !balanceEl) return;
+
+    const name = nameEl.value.trim();
+    const balance = parseFloat(balanceEl.value);
+    const rate = rateEl ? parseFloat(rateEl.value) : 0;
     
     if (!name || !balance || balance <= 0) {
         alert('Please enter creditor name and valid balance');
@@ -943,9 +948,9 @@ function addDebt() {
     updateDebtSummary();
     showToast('Debt added successfully!');
     
-    document.getElementById('debtName').value = '';
-    document.getElementById('debtBalance').value = '';
-    document.getElementById('debtRate').value = '';
+    nameEl.value = '';
+    balanceEl.value = '';
+    if (rateEl) rateEl.value = '';
 }
 
 function displayDebts() {
@@ -1009,9 +1014,9 @@ function clearDebts() {
 // BUDGET
 // ============================================
 function saveBudgets() {
-    const essential = document.getElementById('budgetEssential').value;
-    const lifestyle = document.getElementById('budgetLifestyle').value;
-    const financial = document.getElementById('budgetFinancial').value;
+    const essential = document.getElementById('budgetEssential')?.value;
+    const lifestyle = document.getElementById('budgetLifestyle')?.value;
+    const financial = document.getElementById('budgetFinancial')?.value;
     
     const budgets = {
         essential: parseFloat(essential) || 0,
@@ -1118,10 +1123,10 @@ function updateBudgetDisplay() {
 // PROFILE FUNCTIONS
 // ============================================
 function saveProfile() {
-    const name = document.getElementById('profileName').value.trim();
-    const income = document.getElementById('monthlyIncome').value;
-    const occupation = document.getElementById('userOccupation').value.trim();
-    const goal = document.getElementById('userGoal').value.trim();
+    const name = document.getElementById('profileName')?.value.trim();
+    const income = document.getElementById('monthlyIncome')?.value;
+    const occupation = document.getElementById('userOccupation')?.value.trim();
+    const goal = document.getElementById('userGoal')?.value.trim();
     
     const profile = {
         name: name || 'User',
@@ -1196,8 +1201,12 @@ function displayProfile() {
 // CUSTOM CATEGORIES
 // ============================================
 function addCustomCategory() {
-    const name = document.getElementById('newCategoryName').value.trim();
-    const color = document.getElementById('categoryColor').value;
+    const nameEl = document.getElementById('newCategoryName');
+    const colorEl = document.getElementById('categoryColor');
+    if (!nameEl) return;
+
+    const name = nameEl.value.trim();
+    const color = colorEl ? colorEl.value : '#6058a3';
     
     if (!name) {
         alert('Please enter a category name');
@@ -1223,7 +1232,7 @@ function addCustomCategory() {
     updateAll();
     showToast(`Category "${name}" added!`);
     
-    document.getElementById('newCategoryName').value = '';
+    nameEl.value = '';
 }
 
 function displayCustomCategories() {
@@ -1279,9 +1288,15 @@ function exportAllData() {
 // AI-POWERED REPORT GENERATION
 // ============================================
 async function generateReport() {
-    const month = document.getElementById('reportMonth').value;
+    const monthEl = document.getElementById('reportMonth');
     const container = document.getElementById('reportContent');
-    if (!container) return;
+    if (!monthEl || !container) return;
+
+    const month = monthEl.value;
+    if (!month) {
+        alert('Please select a month');
+        return;
+    }
     
     container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> AI is writing your report...</div>';
     
@@ -1296,9 +1311,6 @@ async function generateReport() {
         return;
     }
     
-    // ============================================
-    // CALCULATE HARD NUMBERS LOCALLY
-    // ============================================
     let income = 0, expense = 0;
     let essential = 0, lifestyle = 0, financial = 0;
     
@@ -1314,23 +1326,18 @@ async function generateReport() {
     
     const remaining = income - expense;
     
-    // Top 3 biggest expenses
     const topTransactions = filtered
         .filter(t => t.amount < 0)
         .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
         .slice(0, 3)
         .map(t => ({ description: t.description, amount: t.amount }));
     
-    // Get user's goal from profile
     let userGoal = 'Not specified';
     try {
         const profile = JSON.parse(localStorage.getItem('trackmyfin_profile') || 'null');
         if (profile && profile.goal) userGoal = profile.goal;
     } catch(e) {}
     
-    // ============================================
-    // CALL THE AI REPORT ENDPOINT
-    // ============================================
     let aiSummary = null;
     let usedFallback = false;
     
@@ -1365,9 +1372,6 @@ async function generateReport() {
     
     if (!aiSummary) usedFallback = true;
     
-    // ============================================
-    // RENDER THE REPORT
-    // ============================================
     const headerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">
             <h4 style="color: #4a3a4a; margin: 0;">Financial Summary for ${month}</h4>
@@ -1423,7 +1427,15 @@ async function generateReport() {
 }
 
 function exportCSV() {
-    const month = document.getElementById('reportMonth').value;
+    const monthEl = document.getElementById('reportMonth');
+    if (!monthEl) return;
+
+    const month = monthEl.value;
+    if (!month) {
+        alert('Please select a month');
+        return;
+    }
+
     const [year, monthNum] = month.split('-');
     const filtered = transactions.filter(t => {
         const tDate = new Date(t.date);
@@ -1454,8 +1466,12 @@ function exportCSV() {
 // SAVINGS GOAL
 // ============================================
 function saveSavingsGoal() {
-    const name = document.getElementById('savingsGoalName').value.trim();
-    const target = parseFloat(document.getElementById('savingsTarget').value);
+    const nameEl = document.getElementById('savingsGoalName');
+    const targetEl = document.getElementById('savingsTarget');
+    if (!nameEl || !targetEl) return;
+
+    const name = nameEl.value.trim();
+    const target = parseFloat(targetEl.value);
     
     if (!name || !target || target <= 0) {
         alert('Please enter a goal name and valid target amount');

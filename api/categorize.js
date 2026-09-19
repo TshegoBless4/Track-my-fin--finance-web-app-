@@ -1,15 +1,18 @@
 // ============================================
-// api/categorize.js - Vercel Serverless Function
-// AI categorization for Track My Fin
+// TRACK MY FIN - CATEGORIZATION API ENDPOINT
 // ============================================
 
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+
 export default async function handler(req, res) {
-    // ============================================
-    // CORS HEADERS
-    // ============================================
+    // Enable CORS
+    res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    );
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -19,20 +22,17 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // ============================================
-    // GET TRANSACTION DATA
-    // ============================================
-    const { description, amount, type } = req.body;
+    const { description, amount, type } = req.body || {};
 
     if (!description) {
         return res.status(400).json({ error: 'Description is required' });
     }
 
-    // ============================================
-    // RULE 1: INCOME SHORT-CIRCUIT
-    // Money coming in is ALWAYS Income. No AI needed.
-    // ============================================
-    if (type === 'income') {
+    // Default categories
+    const categories = ['Essential', 'Lifestyle', 'Financial', 'Income'];
+
+    // Income shortcut
+    if (type === 'income' || amount > 0) {
         return res.status(200).json({
             category: 'Income',
             confidence: 0.95,
@@ -40,141 +40,75 @@ export default async function handler(req, res) {
         });
     }
 
-    // ============================================
-    // RULE 2: FOR EXPENSES, THE AI ONLY CHOOSES
-    // BETWEEN Essential, Lifestyle, OR Financial.
-    // Income is never a valid answer here.
-    // ============================================
-    const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-
+    // If API key is missing, return failure to let frontend fallback handle it
     if (!OPENROUTER_API_KEY) {
-        console.error('Missing API key: OPENROUTER_API_KEY not set in Vercel');
-        return res.status(200).json({
-            category: 'Lifestyle',
-            confidence: 0.3,
-            note: 'Server configuration error: missing API key',
-            source: 'fallback'
-        });
+        return res.status(500).json({ error: 'API key not configured' });
     }
 
-    try {
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                'HTTP-Referer': 'https://track-my-fin-finance-web-app.vercel.app',
-                'X-Title': 'Track My Fin'
-            },
-            body: JSON.stringify({
-                model: 'nex-agi/nex-n2.5-mini:free',
-                messages: [
-                    {
-                        role: 'system',
-                        content: `You are a financial categorizer for South African users.
+    const systemPrompt = `You are a financial categorization assistant. Categorize the transaction description into exactly ONE of these categories: ${categories.join(', ')}.
+Rules:
+- Essential: Groceries, utilities, rent, petrol/fuel, transport, medical, school fees, medication.
+- Lifestyle: Dining out, shopping, entertainment, hobbies, general merchandise, online purchases.
+- Financial: Bank fees, loans, credit cards, insurance, investments, transfers.
+- Income: Salary, wages, deposits, freelance work.
 
-You categorize EXPENSES only. The user has already told you that this transaction is money going OUT.
+Respond strictly in valid JSON format with no markdown formatting or commentary:
+{"category": "CategoryName", "confidence": 0.85}`;
 
-You must return exactly ONE of these three words:
-- Essential (groceries, rent, medication, utilities, transport, school fees, petrol, electricity, water)
-- Lifestyle (dining, coffee, takeout, streaming, shopping, entertainment, clothing, hobbies)
-- Financial (bank fees, insurance, loans, credit cards, interest, account fees)
+    const userPrompt = `Description: "${description}", Amount: R${Math.abs(amount || 0)}`;
 
-Do NOT return "Income". This is an expense, not income.
-Do NOT explain. Do NOT add punctuation. Do NOT add quotes.
-Return one word only: Essential, Lifestyle, or Financial.`
-                    },
-                    {
-                        role: 'user',
-                        content: `Expense description: "${description}" for R${Math.abs(amount || 0)}`
-                    }
-                ],
-                temperature: 0.1,
-                max_tokens: 5
-            })
-        });
+    // Models to try sequentially to avoid rate-limit failures
+    const models = [
+        'meta-llama/llama-3.3-70b-instruct:free',
+        'deepseek/deepseek-r1-distill-llama-70b:free',
+        'google/gemini-2.0-flash-lite-preview-02-05:free'
+    ];
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('OpenRouter API error:', response.status, errorText);
-            return res.status(200).json({
-                category: 'Lifestyle',
-                confidence: 0.3,
-                note: 'API error, using fallback',
-                debug_status: response.status,
-                source: 'fallback'
+    for (const model of models) {
+        try {
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                    'HTTP-Referer': 'https://trackmyfin.vercel.app',
+                    'X-Title': 'Track My Fin',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.1
+                })
             });
-        }
 
-        const data = await response.json();
-
-        // ============================================
-        // EXTRACT RAW TEXT FROM ANY SHAPE
-        // ============================================
-        let rawText = '';
-
-        if (data && data.choices && data.choices[0]) {
-            const choice = data.choices[0];
-            if (choice.message && typeof choice.message.content === 'string') {
-                rawText = choice.message.content;
-            } else if (choice.message && typeof choice.message.content === 'object') {
-                rawText = JSON.stringify(choice.message.content);
-            } else if (typeof choice.text === 'string') {
-                rawText = choice.text;
-            } else if (typeof choice.content === 'string') {
-                rawText = choice.content;
+            if (!response.ok) {
+                console.warn(`Model ${model} failed with status: ${response.status}`);
+                continue;
             }
-        }
 
-        if (!rawText || rawText.length === 0) {
-            console.error('Empty AI response:', JSON.stringify(data).substring(0, 500));
-            return res.status(200).json({
-                category: 'Lifestyle',
-                confidence: 0.3,
-                note: 'Empty AI response',
-                source: 'fallback'
-            });
-        }
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content;
 
-        // ============================================
-        // FIND A VALID EXPENSE CATEGORY
-        // Note: Income is NOT valid here
-        // ============================================
-        const validCategories = ['Essential', 'Lifestyle', 'Financial'];
-        let matchedCategory = null;
+            if (content) {
+                // Clean potential markdown wrap code blocks
+                const jsonStr = content.replace(/```json/g, '').replace(/```/g, '').trim();
+                const parsed = JSON.parse(jsonStr);
 
-        for (const valid of validCategories) {
-            const regex = new RegExp(`\\b${valid}\\b`, 'i');
-            if (regex.test(rawText)) {
-                matchedCategory = valid;
-                break;
+                if (parsed.category && categories.includes(parsed.category)) {
+                    return res.status(200).json({
+                        category: parsed.category,
+                        confidence: parsed.confidence || 0.85,
+                        source: 'ai'
+                    });
+                }
             }
+        } catch (err) {
+            console.error(`Error calling model ${model}:`, err);
         }
-
-        if (matchedCategory) {
-            return res.status(200).json({
-                category: matchedCategory,
-                confidence: 0.85,
-                source: 'ai'
-            });
-        }
-
-        console.error('Could not extract category from AI text:', rawText.substring(0, 200));
-        return res.status(200).json({
-            category: 'Lifestyle',
-            confidence: 0.4,
-            note: 'Could not parse AI response',
-            debug_raw_text: rawText.substring(0, 200),
-            source: 'fallback'
-        });
-
-    } catch (error) {
-        console.error('Proxy error:', error);
-        return res.status(200).json({
-            category: 'Lifestyle',
-            confidence: 0.3,
-            note: 'Server error',
-            source: 'fallback'
-        });
     }
+
+    return res.status(500).json({ error: 'All AI models failed to categorize' });
 }
