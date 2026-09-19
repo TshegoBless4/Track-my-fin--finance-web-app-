@@ -82,7 +82,8 @@ Write the report now.`;
                 'X-Title': 'Track My Fin'
             },
             body: JSON.stringify({
-                model: 'google/gemma-4-31b-it:free,nex-agi/nex-n2.5-mini:free,nex-agi/nex-n2.5-pro:free',
+                // model: 'google/gemma-4-31b-it:free,nex-agi/nex-n2.5-mini:free,nex-agi/nex-n2.5-pro:free'
+                model: 'nex-agi/nex-n2.5-mini:free',
                 messages: [
                     {
                         role: 'system',
