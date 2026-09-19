@@ -617,21 +617,82 @@ function updateAll() {
     }
 }
 
-function updateSummary() {
-    const incomeEl = document.getElementById('incomeAmount');
-    const expenseEl = document.getElementById('expenseAmount');
-    const remainingEl = document.getElementById('remainingAmount');
-    
-    if (!incomeEl || !expenseEl || !remainingEl) return;
-    
-    let income = 0, expense = 0;
+function updateChart() {
+    const canvas = document.getElementById('categoryChart');
+    if (!canvas) return;
+
+    const totals = {};
+    let totalExpense = 0;
+
     transactions.forEach(t => {
-        if (t.amount > 0) income += t.amount;
-        else expense += Math.abs(t.amount);
+        if (t.amount < 0) {
+            const cat = t.category || 'Uncategorised';
+            const value = Math.abs(t.amount);
+            totals[cat] = (totals[cat] || 0) + value;
+            totalExpense += value;
+        }
     });
-    incomeEl.innerHTML = `R${income.toFixed(2)}`;
-    expenseEl.innerHTML = `R${expense.toFixed(2)}`;
-    remainingEl.innerHTML = `R${(income - expense).toFixed(2)}`;
+
+    const labels = Object.keys(totals);
+    const values = labels.map(k => totals[k]);
+    const colours = labels.map(getCategoryColor);
+
+    const breakdownEl = document.getElementById('breakdownList');
+    if (breakdownEl) {
+        if (labels.length === 0) {
+            breakdownEl.innerHTML = '<p style="color:#888;">No spending yet.</p>';
+        } else {
+            breakdownEl.innerHTML = labels
+                .sort((a, b) => totals[b] - totals[a])
+                .map(cat => `
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">
+                            <i class="fas fa-circle" style="color:${getCategoryColor(cat)};"></i> ${escapeHtml(cat)}
+                        </span>
+                        <span class="breakdown-amount">R${totals[cat].toFixed(2)}</span>
+                    </div>
+                `).join('');
+        }
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (categoryChart) {
+        categoryChart.destroy();
+        categoryChart = null;
+    }
+
+    categoryChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels.length ? labels : ['No data'],
+            datasets: [{
+                data: values.length ? values : [1],
+                backgroundColor: colours.length ? colours : ['#ccc'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#4a3a4a' }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed;
+                            const percent = totalExpense > 0
+                                ? ((value / totalExpense) * 100).toFixed(1)
+                                : 0;
+                            return `${context.label}: R${value.toFixed(2)} (${percent}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 function updateTransactionList() {
