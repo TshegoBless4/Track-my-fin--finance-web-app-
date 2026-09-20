@@ -634,12 +634,14 @@ function toggleShowPending() {
 // UPDATE UI
 // ============================================
 function updateAll() {
-    updateSummary();
+    updateDashboardSummary(); // Runs the updated robust calculation
     updateTransactionList();
     updateChart();
     updateBudgetDisplay();
     
-    const pendingCount = transactions.filter(t => t.needsReview && !t.reviewed).length;
+    const pendingCount = (typeof transactions !== 'undefined' ? transactions : [])
+        .filter(t => t.needsReview && !t.reviewed).length;
+        
     if (pendingCount > 0) {
         showReviewBanner(pendingCount);
     } else {
@@ -647,24 +649,61 @@ function updateAll() {
     }
 }
 
+// Retained as an alias in case other parts of your code call updateSummary()
 function updateSummary() {
-    let totalIncome = 0;
-    let totalExpense = 0;
+    updateDashboardSummary();
+}
 
-    transactions.forEach(t => {
-        if (t.amount > 0) totalIncome += t.amount;
-        else totalExpense += Math.abs(t.amount);
+// Retained as an alias in case other parts of your code call updateSummary()
+function updateSummary() {
+    updateDashboardSummary();
+}
+
+function updateDashboardSummary() {
+    let totalIncome = 0;
+    let totalExpenses = 0;
+
+    // Retrieve transactions safely from global scope or window object
+    const list = (typeof transactions !== 'undefined' && Array.isArray(transactions)) 
+        ? transactions 
+        : (window.transactions || []);
+
+    list.forEach(t => {
+        // 1. Sanitize amount (handle string inputs, currency symbols, comma decimals)
+        let amt = 0;
+        if (typeof t.amount === 'number') {
+            amt = t.amount;
+        } else if (typeof t.amount === 'string') {
+            amt = parseFloat(t.amount.replace(/[^0-9.-]/g, '')) || 0;
+        }
+
+        // 2. Determine Income vs Expense
+        if (t.type === 'income' || t.type === 'Income') {
+            totalIncome += Math.abs(amt);
+        } else if (t.type === 'expense' || t.type === 'Expense') {
+            totalExpenses += Math.abs(amt);
+        } else {
+            // Fallback for objects without an explicit t.type property
+            if (t.category && t.category !== 'Income' && amt > 0) {
+                totalExpenses += Math.abs(amt);
+            } else if (amt > 0) {
+                totalIncome += Math.abs(amt);
+            } else {
+                totalExpenses += Math.abs(amt);
+            }
+        }
     });
 
-    const net = totalIncome - totalExpense;
+    const remaining = totalIncome - totalExpenses;
 
-    const incomeEl = document.getElementById('totalIncome');
-    const expenseEl = document.getElementById('totalExpenses');
-    const netEl = document.getElementById('netBalance');
+    // 3. Target your exact HTML IDs from index.html
+    const incomeEl = document.getElementById('incomeAmount');
+    const expensesEl = document.getElementById('expenseAmount');
+    const remainingEl = document.getElementById('remainingAmount');
 
-    if (incomeEl) incomeEl.innerText = `R${totalIncome.toFixed(2)}`;
-    if (expenseEl) expenseEl.innerText = `R${totalExpense.toFixed(2)}`;
-    if (netEl) netEl.innerText = `R${net.toFixed(2)}`;
+    if (incomeEl) incomeEl.textContent = `R${totalIncome.toFixed(2)}`;
+    if (expensesEl) expensesEl.textContent = `R${totalExpenses.toFixed(2)}`;
+    if (remainingEl) remainingEl.textContent = `R${remaining.toFixed(2)}`;
 }
 
 function updateChart() {
@@ -674,10 +713,17 @@ function updateChart() {
     const totals = {};
     let totalExpense = 0;
 
-    transactions.forEach(t => {
-        if (t.amount < 0) {
+    const list = (typeof transactions !== 'undefined') ? transactions : [];
+
+    list.forEach(t => {
+        let amt = 0;
+        if (typeof t.amount === 'number') amt = t.amount;
+        else if (typeof t.amount === 'string') amt = parseFloat(t.amount.replace(/[^0-9.-]/g, '')) || 0;
+
+        // Count as spending if negative OR if categorized as an expense
+        if (amt < 0 || (t.category && t.category !== 'Income')) {
             const cat = t.category || 'Uncategorised';
-            const value = Math.abs(t.amount);
+            const value = Math.abs(amt);
             totals[cat] = (totals[cat] || 0) + value;
             totalExpense += value;
         }
@@ -697,7 +743,7 @@ function updateChart() {
                 .map(cat => `
                     <div class="breakdown-item">
                         <span class="breakdown-label">
-                            <i class="fas fa-circle" style="color:${getCategoryColor(cat)};"></i> ${escapeHtml(cat)}
+                            <i class="fas fa-circle" style="color:${getCategoryColor(cat)};"></i> ${typeof escapeHtml === 'function' ? escapeHtml(cat) : cat}
                         </span>
                         <span class="breakdown-amount">R${totals[cat].toFixed(2)}</span>
                     </div>
@@ -708,7 +754,7 @@ function updateChart() {
     if (typeof Chart === 'undefined') return;
 
     const ctx = canvas.getContext('2d');
-    if (categoryChart) {
+    if (typeof categoryChart !== 'undefined' && categoryChart) {
         categoryChart.destroy();
         categoryChart = null;
     }
@@ -1426,6 +1472,18 @@ async function generateReport() {
     `;
 }
 
+// Security sanitization helper
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+window.generateReport = generateReport;
 function exportCSV() {
     const monthEl = document.getElementById('reportMonth');
     if (!monthEl) return;
