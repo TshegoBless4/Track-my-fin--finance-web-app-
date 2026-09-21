@@ -1654,6 +1654,19 @@ function calculateCategoryTotals(transactions) {
     return totals;
 }
 
+function switchTab(tabName) {
+    // Hide all view sections
+    document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
+    
+    // Show the selected target view
+    const target = document.getElementById(tabName);
+    if (target) target.style.display = 'block';
+
+    // Re-run the report generation function so data is re-rendered
+    if (tabName === 'reports' && typeof generateReports === 'function') {
+        generateReports();
+    }
+}
 
 // Force reset function (run in console if needed)
 function forceResetEverything() {
