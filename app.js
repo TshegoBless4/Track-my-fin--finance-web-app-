@@ -27,6 +27,14 @@ let transactions = [];
 let categoryChart = null;
 const SAMPLE_DATA_KEY = 'trackmyfin_sample_loaded';
 
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('transactionList')) displayTransactions();
+    if (document.getElementById('categoryChart')) updateDashboardSummary();
+    if (document.getElementById('debtList')) displayDebts();
+    if (document.getElementById('budgetProgressDisplay')) loadBudgets();
+    if (document.getElementById('profileDisplay')) loadProfile();
+});
+
 function loadData() {
     const saved = localStorage.getItem('trackmyfin_data');
     if (saved) {
@@ -306,14 +314,38 @@ async function addTransaction(event) {
 // ============================================
 // DELETE SINGLE TRANSACTION
 // ============================================
+// Delete a single transaction by ID
 function deleteTransaction(id) {
-    if (confirm('Are you sure you want to delete this transaction?')) {
-        transactions = transactions.filter(t => t.id !== id);
-        saveData();
-        updateAll();
-        showToast('Transaction deleted', 'success');
-    }
+    let transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    transactions = transactions.filter(t => t.id !== id);
+    localStorage.setItem('transactions', JSON.stringify(transactions));
+    
+    showToast('Transaction deleted');
+    if (document.getElementById('transactionList')) displayTransactions();
+    if (document.getElementById('categoryChart')) updateDashboardSummary();
 }
+
+// Edge-case handler: Refund detection and duplicate checking
+function processIncomingTransaction(tx, existingList) {
+    const descLower = tx.description.toLowerCase();
+    
+    // Refund / Reversal detection
+    if (descLower.includes('refund') || descLower.includes('reversal') || descLower.includes('cashback')) {
+        tx.type = 'income';
+        tx.category = 'Income';
+        tx.amount = Math.abs(tx.amount);
+    }
+
+    // Duplicate Detection (Same date, amount, and description)
+    const isDuplicate = existingList.some(existing => 
+        existing.date === tx.date && 
+        Math.abs(existing.amount) === Math.abs(tx.amount) && 
+        existing.description.toLowerCase().trim() === tx.description.toLowerCase().trim()
+    );
+
+    return { transaction: tx, isDuplicate };
+}
+
 
 // ============================================
 // UPLOAD CSV
@@ -1334,142 +1366,81 @@ function exportAllData() {
 // AI-POWERED REPORT GENERATION
 // ============================================
 async function generateReport() {
-    const monthEl = document.getElementById('reportMonth');
-    const container = document.getElementById('reportContent');
-    if (!monthEl || !container) return;
+    const monthInput = document.getElementById('reportMonth')?.value;
+    const reportContent = document.getElementById('reportContent');
+    
+    if (!monthInput || !reportContent) return;
 
-    const month = monthEl.value;
-    if (!month) {
-        alert('Please select a month');
-        return;
-    }
+    reportContent.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Generating report for ${monthInput}...</div>`;
+
+    const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    const profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
     
-    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> AI is writing your report...</div>';
+    const monthTx = transactions.filter(t => t.date && t.date.startsWith(monthInput));
     
-    const [year, monthNum] = month.split('-');
-    const filtered = transactions.filter(t => {
-        const tDate = new Date(t.date);
-        return tDate.getMonth() === parseInt(monthNum) - 1 && tDate.getFullYear() === parseInt(year);
-    });
-    
-    if (filtered.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-info-circle"></i> No transactions found for this month.</div>';
-        return;
-    }
-    
-    let income = 0, expense = 0;
-    let essential = 0, lifestyle = 0, financial = 0;
-    
-    filtered.forEach(t => {
-        if (t.amount > 0) income += t.amount;
-        else {
-            expense += Math.abs(t.amount);
-            if (t.category === 'Essential') essential += Math.abs(t.amount);
-            else if (t.category === 'Lifestyle') lifestyle += Math.abs(t.amount);
-            else if (t.category === 'Financial') financial += Math.abs(t.amount);
+    let income = 0;
+    let expenses = 0;
+    const catTotals = { Essential: 0, Lifestyle: 0, Financial: 0 };
+
+    monthTx.forEach(t => {
+        const amt = Math.abs(t.amount);
+        if (t.type === 'income' || t.amount > 0) {
+            income += amt;
+        } else {
+            expenses += amt;
+            const cat = t.category || 'Lifestyle';
+            if (catTotals[cat] !== undefined) catTotals[cat] += amt;
         }
     });
-    
-    const remaining = income - expense;
-    
-    const topTransactions = filtered
-        .filter(t => t.amount < 0)
+
+    const remaining = income - expenses;
+    const topExpenses = monthTx
+        .filter(t => t.type === 'expense' || t.amount < 0)
         .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
-        .slice(0, 3)
-        .map(t => ({ description: t.description, amount: t.amount }));
-    
-    let userGoal = 'Not specified';
+        .slice(0, 3);
+
     try {
-        const profile = JSON.parse(localStorage.getItem('trackmyfin_profile') || 'null');
-        if (profile && profile.goal) userGoal = profile.goal;
-    } catch(e) {}
-    
-    let aiSummary = null;
-    let usedFallback = false;
-    
-    try {
-        const response = await fetch(REPORT_URL, {
+        const response = await fetch('/api/report', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                month: month,
-                income: income,
-                expenses: expense,
-                remaining: remaining,
-                categories: {
-                    Essential: essential,
-                    Lifestyle: lifestyle,
-                    Financial: financial
-                },
-                topTransactions: topTransactions,
-                userGoal: userGoal
+                month: monthInput,
+                income: income.toFixed(2),
+                expenses: expenses.toFixed(2),
+                remaining: remaining.toFixed(2),
+                categories: catTotals,
+                topTransactions: topExpenses,
+                userGoal: profile.goal || 'Maintain financial health'
             })
         });
+
+        const data = await response.json();
         
-        if (response.ok) {
-            const data = await response.json();
-            if (data.source === 'ai' && data.summary) {
-                aiSummary = data.summary;
-            }
-        }
-    } catch(e) {
-        console.error('Report API error:', e);
+        const badgeClass = data.source === 'ai' ? 'style="background:#6058a3; color:#fff;"' : 'style="background:#aaa; color:#fff;"';
+        const badgeText = data.source === 'ai' ? 'AI Generated' : 'Rule Summary';
+
+        reportContent.innerHTML = `
+            <div style="margin-bottom: 12px;">
+                <span class="transaction-category" ${badgeClass}>${badgeText}</span>
+            </div>
+            <div style="line-height: 1.6; white-space: pre-line; color: #2c2c2a;">
+                ${data.summary}
+            </div>
+        `;
+    } catch (err) {
+        console.error('Report Generation Error:', err);
+        reportContent.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i> Failed to generate report. Please try again.</div>`;
     }
-    
-    if (!aiSummary) usedFallback = true;
-    
-    const headerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">
-            <h4 style="color: #4a3a4a; margin: 0;">Financial Summary for ${month}</h4>
-            <span style="font-size: 11px; padding: 3px 10px; border-radius: 20px; background: ${usedFallback ? '#f4b1b4' : '#d4e4d4'}; color: #4a3a4a;">
-                ${usedFallback ? 'Basic summary' : 'AI-generated'}
-            </span>
-        </div>
-    `;
-    
-    const bodyHTML = aiSummary 
-        ? `<div style="background: rgba(255,255,255,0.15); padding: 18px; border-radius: 16px; margin: 15px 0; white-space: pre-wrap; line-height: 1.8; color: #2c2c2a;">${escapeHtml(aiSummary)}</div>`
-        : `<div style="background: rgba(255,255,255,0.15); padding: 18px; border-radius: 16px; margin: 15px 0; line-height: 1.8; color: #2c2c2a;">
-                <p><em>AI report is not available right now. Here is a basic summary of your month.</em></p>
-                <p>You spent R${expense.toFixed(2)} in ${month}. Your remaining balance was R${remaining.toFixed(2)}, which means you are ${remaining >= 0 ? 'within budget' : 'over budget'}.</p>
-           </div>`;
-    
-    const categoryHTML = `
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
-            <p><strong>Category Breakdown:</strong></p>
-            <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 8px;">
-                <span><i class="fas fa-circle" style="color:#6058a3;"></i> Essential: R${essential.toFixed(2)} (${expense > 0 ? Math.round((essential/expense)*100) : 0}%)</span>
-                <span><i class="fas fa-circle" style="color:#b271af;"></i> Lifestyle: R${lifestyle.toFixed(2)} (${expense > 0 ? Math.round((lifestyle/expense)*100) : 0}%)</span>
-                <span><i class="fas fa-circle" style="color:#7aa2c6;"></i> Financial: R${financial.toFixed(2)} (${expense > 0 ? Math.round((financial/expense)*100) : 0}%)</span>
-            </div>
-        </div>
-    `;
-    
-    const numbersHTML = `
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 15px;">
-            <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; text-align: center;">
-                <p style="font-size: 12px; color: #888;">Income</p>
-                <p style="font-weight: 700; color: #6a8a6a;">R${income.toFixed(2)}</p>
-            </div>
-            <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; text-align: center;">
-                <p style="font-size: 12px; color: #888;">Expenses</p>
-                <p style="font-weight: 700; color: #c47060;">R${expense.toFixed(2)}</p>
-            </div>
-            <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; text-align: center;">
-                <p style="font-size: 12px; color: #888;">Remaining</p>
-                <p style="font-weight: 700; color: ${remaining >= 0 ? '#6a8a6a' : '#c47060'};">R${remaining.toFixed(2)}</p>
-            </div>
-        </div>
-    `;
-    
-    container.innerHTML = `
-        <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 20px;">
-            ${headerHTML}
-            ${bodyHTML}
-            ${numbersHTML}
-            ${categoryHTML}
-        </div>
-    `;
+}
+
+// Functional PDF Export replacing placeholder toast
+function exportPDF() {
+    const reportContent = document.getElementById('reportContent');
+    if (!reportContent || reportContent.innerText.includes('Select a month')) {
+        showToast('Please generate a report first');
+        return;
+    }
+    window.print();
 }
 
 // Security sanitization helper
@@ -1650,6 +1621,33 @@ function init() {
 }
 
 init();
+
+function getCustomCategories() {
+    return JSON.parse(localStorage.getItem('customCategories') || '[]');
+}
+
+function calculateCategoryTotals(transactions) {
+    const totals = {
+        Essential: 0,
+        Lifestyle: 0,
+        Financial: 0,
+        Income: 0
+    };
+
+    // Pull in user-created custom categories from settings
+    const customCats = getCustomCategories();
+    customCats.forEach(c => { totals[c.name] = 0; });
+
+    transactions.forEach(t => {
+        if (t.type === 'expense') {
+            const cat = t.category || 'Lifestyle';
+            totals[cat] = (totals[cat] || 0) + Math.abs(t.amount);
+        }
+    });
+
+    return totals;
+}
+
 
 // Force reset function (run in console if needed)
 function forceResetEverything() {

@@ -65,6 +65,27 @@
             </div>
         </div>
 
+        <!-- Custom Category Rules -->
+        <div class="section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0;"><i class="fas fa-robot"></i> Custom Category Rules</h3>
+                <button onclick="applyRulesToExisting()" class="btn-secondary" style="font-size: 12px; padding: 6px 12px;">
+                    <i class="fas fa-sync"></i> Apply Rules to Past Transactions
+                </button>
+            </div>
+            
+            <!-- Rule Input Form Row -->
+            <div class="form-row" style="margin-bottom: 15px;">
+                <input type="text" id="ruleKeywordInput" placeholder="Keyword (e.g. Woolworths, Uber)" style="flex:1;">
+                <select id="ruleCategorySelect" style="flex:1;">
+                    <!-- Categories dynamically inserted here -->
+                </select>
+                <button onclick="handleAddRule()"><i class="fas fa-plus"></i> Add Rule</button>
+            </div>
+
+            <div id="customRulesContainer"></div>
+        </div>
+
         <!-- Data Management -->
         <div class="section">
             <h3><i class="fas fa-database"></i> Data Management</h3>
@@ -88,9 +109,10 @@
 
     <script src="app.js"></script>
     <script>
-        // Load profile when page loads
         loadProfile();
         displayCustomCategories();
+        populateRuleCategories();
+        renderCustomRules();
     </script>
 </body>
 </html>
