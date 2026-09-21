@@ -316,13 +316,10 @@ async function addTransaction(event) {
 // ============================================
 // Delete a single transaction by ID
 function deleteTransaction(id) {
-    let transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     transactions = transactions.filter(t => t.id !== id);
-    localStorage.setItem('transactions', JSON.stringify(transactions));
-    
+    saveData();
     showToast('Transaction deleted');
-    if (document.getElementById('transactionList')) displayTransactions();
-    if (document.getElementById('categoryChart')) updateDashboardSummary();
+    updateAll();
 }
 
 // Edge-case handler: Refund detection and duplicate checking
@@ -853,7 +850,9 @@ function updateTransactionList() {
                 ).join('')}
             </select>
             ${t.needsReview && !t.reviewed ? '<span style="background: #f4b1b4; color: #4a3a4a; padding:2px 10px; border-radius: 20px; font-size:10px;"><i class="fas fa-flag"></i> Needs Review</span>' : ''}
-            <button onclick="deleteTransaction(${t.id})" style="background: rgba(200, 100, 100, 0.2); border: 1px solid rgba(200, 100, 100, 0.4); color: #c47060; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="fas fa-trash-alt" style="font-size: 11px;"></i></button>
+            <button class="delete-btn" onclick="deleteTransaction(${t.id})" title="Delete transaction">
+                <i class="fas fa-trash"></i>
+            </button>
         </div>
     `).join('');
 }
@@ -1431,7 +1430,14 @@ async function generateReport() {
         console.error('Report Generation Error:', err);
         reportContent.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i> Failed to generate report. Please try again.</div>`;
     }
+
+    
+localStorage.setItem('lastGeneratedReport', JSON.stringify({
+    month: monthInput,
+    html: reportContent.innerHTML
+}));
 }
+
 
 // Functional PDF Export replacing placeholder toast
 function exportPDF() {
