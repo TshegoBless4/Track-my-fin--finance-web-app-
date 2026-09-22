@@ -21,7 +21,7 @@
         </nav>
 
         <h1><i class="fas fa-credit-card"></i> Debt Destroyer</h1>
-        <p class="subtitle">Track your debts and get AI-powered payoff recommendations</p>
+        <p class="subtitle">Track your debts and let your AI coach help you win</p>
 
         <div class="summary-cards">
             <div class="card">
@@ -32,11 +32,34 @@
                 <h3><i class="fas fa-percent"></i> Highest Rate</h3>
                 <div class="amount" id="highestRate">0%</div>
             </div>
-           <!-- Inside debt.html -->
-<div class="card">
-    <h3><i class="fas fa-lightbulb"></i> Payoff Strategy</h3>
-    <div class="amount" id="aiRecommendation" style="font-size:15px; font-weight:500;">Add a debt to see your strategy</div>
-</div>
+            <div class="card">
+                <h3><i class="fas fa-lightbulb"></i> Payoff Strategy</h3>
+                
+                <!-- Fin, Your AI Coach Persona Bubble -->
+                <div style="display: flex; gap: 10px; align-items: flex-start; background: rgba(255, 255, 255, 0.25); padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.4); margin-top: 8px;">
+                    <div style="background: #4a3a4a; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                        <i class="fas fa-robot" style="font-size: 14px;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 2px 0; font-size: 13px; color: #3a2a3a; display: flex; align-items: center; gap: 4px;">
+                            Fin <span style="font-size: 9px; background: rgba(74,58,74,0.15); padding: 1px 5px; border-radius: 8px;">Coach</span>
+                        </h4>
+                        <div id="aiRecommendation" style="font-size: 12px; line-height: 1.4; color: #4a3a4a;">
+                            Hey! Add a debt above, and I'll help you map out your custom payoff strategy. You've got this!
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Payoff Simulator Container -->
+                <div style="margin-top: 12px; background: rgba(255,255,255,0.15); padding: 10px; border-radius: 12px;">
+                    <label style="font-size: 12px; display: block; margin-bottom: 4px;">Monthly Debt Payment Budget (R):</label>
+                    <input type="number" id="monthlyDebtBudget" placeholder="e.g. 2500" style="width: 100%; padding: 5px 10px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); font-size: 13px;">
+                    
+                    <div id="debtSimulatorResult"></div>
+                </div>
+
+            </div>
+        </div>
 
         <div class="section">
             <h3><i class="fas fa-plus-circle"></i> Add Debt</h3>
@@ -60,11 +83,12 @@
 
     </div>
 
+    <!-- Script Routing -->
     <script src="app.js"></script>
     <script>
-        // Force load debts when page loads (this is the FIX)
-        displayDebts();
-        updateDebtSummary();
+        // Safe execution check for debt functions
+        if (typeof displayDebts === 'function') displayDebts();
+        if (typeof updateDebtSummary === 'function') updateDebtSummary();
     </script>
 </body>
 </html>

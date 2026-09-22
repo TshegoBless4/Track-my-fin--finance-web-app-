@@ -1193,40 +1193,120 @@ function displayDebts() {
     }
     
     container.innerHTML = debts.map(d => `
-        <div style="background: rgba(255,255,255,0.12); backdrop-filter: blur(8px); padding: 15px; border-radius: 16px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.2);">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <div>
-                    <strong>${escapeHtml(d.name)}</strong>
-                    <p style="font-size:12px; color:#888;">Added: ${d.date}</p>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-weight:700; color:#c47060;">R${d.balance.toFixed(2)}</div>
-                    ${d.rate > 0 ? `<div style="font-size:12px; color:#888;">${d.rate}% interest</div>` : ''}
-                </div>
+    <div style="background: rgba(255,255,255,0.12); backdrop-filter: blur(8px); padding: 15px; border-radius: 16px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+                <strong>${escapeHtml(d.name)}</strong>
+                <p style="font-size:12px; color:#888;">Added: ${d.date}</p>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-weight:700; color:#c47060;">R${d.balance.toFixed(2)}</div>
+                ${d.rate > 0 ? `<div style="font-size:12px; color:#888;">${d.rate}% interest</div>` : ''}
+                <button onclick="deleteDebt(${d.id})" style="background: rgba(200,170,170,0.4); border: none; padding: 4px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; margin-top: 6px;">Paid Off / Remove</button>
             </div>
         </div>
-    `).join('');
+    </div>
+`).join('');
+
 }
 
+// ============================================
+// DEBT PAYOFF TIMELINE ESTIMATOR (AVALANCHE METHOD)
+// ============================================
+function calculatePayoffTimeline(monthlyBudget) {
+    let debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
+    if (debts.length === 0 || !monthlyBudget || monthlyBudget <= 0) {
+        return { months: 0, totalInterest: 0, error: 'Add debts and a valid monthly budget.' };
+    }
+
+    // Deep copy debts so we don't mutate real state during simulation
+    let simDebts = debts.map(d => ({
+        name: d.name,
+        balance: parseFloat(d.balance),
+        rate: parseFloat(d.rate) || 0
+    }));
+
+    let months = 0;
+    let totalInterestPaid = 0;
+    let maxSafetyCounter = 600; // Cap at 50 years to prevent infinite loops
+
+    while (simDebts.some(d => d.balance > 0.01) && months < maxSafetyCounter) {
+        months++;
+        let availableFunds = parseFloat(monthlyBudget);
+
+        // 1. Sort debts by interest rate descending (Avalanche priority)
+        simDebts.sort((a, b) => b.rate - a.rate);
+
+        // 2. Apply monthly interest and collect required minimums (estimated at 3% or R50 minimum)
+        let totalMinRequired = 0;
+        simDebts.forEach(d => {
+            if (d.balance > 0) {
+                let monthlyInterest = (d.balance * (d.rate / 100)) / 12;
+                totalInterestPaid += monthlyInterest;
+                d.balance += monthlyInterest;
+
+                let minPay = Math.max(50, d.balance * 0.03);
+                if (minPay > d.balance) minPay = d.balance;
+                
+                d.balance -= minPay;
+                availableFunds -= minPay;
+            }
+        });
+
+        // If the monthly budget is too low to even cover minimums
+        if (availableFunds < 0 && months === 1) {
+            return { error: 'Monthly budget is too low to cover minimum payments!' };
+        }
+
+        // 3. Apply any remaining budget surplus directly to the highest-priority active debt
+        let targetDebt = simDebts.find(d => d.balance > 0.01);
+        if (targetDebt && availableFunds > 0) {
+            targetDebt.balance -= availableFunds;
+        }
+
+        // Clean up fully paid debts
+        simDebts = simDebts.filter(d => d.balance > 0.01);
+    }
+
+    return {
+        months: months,
+        years: (months / 12).toFixed(1),
+        totalInterest: totalInterestPaid
+    };
+}
+
+// ============================================
+// UPDATED DEBT SUMMARY & SIMULATOR INTEGRATION
+// ============================================
 function updateDebtSummary() {
-    const debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
-    const totalDebt = debts.reduce((sum, d) => sum + d.balance, 0);
-    const highestRate = debts.reduce((max, d) => Math.max(max, d.rate || 0), 0);
+    let debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
+    let totalDebt = debts.reduce((sum, d) => sum + d.balance, 0);
+    let highestRate = debts.reduce((max, d) => Math.max(max, d.rate || 0), 0);
     
     const totalEl = document.getElementById('totalDebt');
     const rateEl = document.getElementById('highestRate');
-    const aiEl = document.getElementById('aiRecommendation');
     
     if (totalEl) totalEl.innerHTML = `R${totalDebt.toFixed(2)}`;
     if (rateEl) rateEl.innerHTML = `${highestRate.toFixed(1)}%`;
-    if (aiEl) {
-        if (debts.length === 0) {
-            aiEl.innerHTML = 'Add a debt to get a payoff strategy';
-        } else {
-            const highest = debts.reduce((max, d) => (d.rate || 0) > (max.rate || 0) ? d : max, debts[0]);
-            aiEl.innerHTML = `Pay <strong>${escapeHtml(highest.name)}</strong> first (${highest.rate}%)`;
-        }
+    
+    // Grab current monthly budget value from simulator input
+    const budgetInput = document.getElementById('monthlyDebtBudget');
+    const monthlyBudget = budgetInput ? parseFloat(budgetInput.value) || 0 : 0;
+
+    // Trigger live AI coach response
+    fetchAICoachAdvice(debts, monthlyBudget);
+
+    // Bind simulator listener if not already bound
+    if (budgetInput && !budgetInput.dataset.simulatorBound) {
+        budgetInput.addEventListener('input', () => {
+            renderDebtPayoffSimulator();
+            // Debounce or update AI coach on budget change as well
+            fetchAICoachAdvice(debts, parseFloat(budgetInput.value) || 0);
+        });
+        budgetInput.dataset.simulatorBound = 'true';
     }
+    
+    renderDebtPayoffSimulator();
 }
 
 function clearDebts() {
@@ -1236,6 +1316,132 @@ function clearDebts() {
         updateDebtSummary();
         showToast('All debts cleared');
     }
+}
+
+// Add this function to your debt section
+function deleteDebt(id) {
+    let debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
+    debts = debts.filter(d => d.id !== id);
+    localStorage.setItem('trackmyfin_debts', JSON.stringify(debts));
+    displayDebts();
+    updateDebtSummary();
+    showToast('Debt settled and removed!');
+}
+
+// ============================================
+// ADVANCED DEBT PAYOFF SIMULATOR (Avalanche vs. Snowball)
+// ============================================
+function calculateTimelineForMethod(monthlyBudget, method = 'avalanche') {
+    let debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
+    if (debts.length === 0 || !monthlyBudget || monthlyBudget <= 0) {
+        return { months: 0, totalInterest: 0, error: 'Add debts and a valid monthly budget.' };
+    }
+
+    // Deep copy debts so we don't mutate state during simulation
+    let simDebts = debts.map(d => ({
+        name: d.name,
+        balance: parseFloat(d.balance),
+        rate: parseFloat(d.rate) || 0
+    }));
+
+    let months = 0;
+    let totalInterestPaid = 0;
+    let maxSafetyCounter = 600; // 50-year cap to prevent infinite loops
+
+    while (simDebts.some(d => d.balance > 0.01) && months < maxSafetyCounter) {
+        months++;
+        let availableFunds = parseFloat(monthlyBudget);
+
+        // Sort based on chosen strategy
+        if (method === 'avalanche') {
+            simDebts.sort((a, b) => b.rate - a.rate); // Highest interest rate first
+        } else {
+            simDebts.sort((a, b) => a.balance - b.balance); // Lowest balance first
+        }
+
+        // Apply minimum payments and calculate interest
+        simDebts.forEach(d => {
+            if (d.balance > 0) {
+                let monthlyInterest = (d.balance * (d.rate / 100)) / 12;
+                totalInterestPaid += monthlyInterest;
+                d.balance += monthlyInterest;
+
+                let minPay = Math.max(50, d.balance * 0.03);
+                if (minPay > d.balance) minPay = d.balance;
+                
+                d.balance -= minPay;
+                availableFunds -= minPay;
+            }
+        });
+
+        if (availableFunds < 0 && months === 1) {
+            return { error: 'Monthly budget is too low to cover minimum payments!' };
+        }
+
+        // Apply remaining budget surplus directly to top priority debt
+        let targetDebt = simDebts.find(d => d.balance > 0.01);
+        if (targetDebt && availableFunds > 0) {
+            targetDebt.balance -= availableFunds;
+        }
+
+        simDebts = simDebts.filter(d => d.balance > 0.01);
+    }
+
+    return {
+        months: months,
+        years: (months / 12).toFixed(1),
+        totalInterest: totalInterestPaid
+    };
+}
+
+function renderDebtPayoffSimulator() {
+    const container = document.getElementById('debtSimulatorResult');
+    const budgetInput = document.getElementById('monthlyDebtBudget');
+    if (!container || !budgetInput) return;
+
+    let monthlyBudget = parseFloat(budgetInput.value) || 0;
+    let debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
+
+    if (debts.length === 0) {
+        container.innerHTML = '<p style="color: #888; font-size: 13px;">Add debts above to use the payoff simulator.</p>';
+        return;
+    }
+
+    if (monthlyBudget <= 0) {
+        container.innerHTML = '<p style="color: #888; font-size: 13px;">Enter a monthly budget amount to run the simulator.</p>';
+        return;
+    }
+
+    let avalanche = calculateTimelineForMethod(monthlyBudget, 'avalanche');
+    let snowball = calculateTimelineForMethod(monthlyBudget, 'snowball');
+
+    if (avalanche.error) {
+        container.innerHTML = `<span style="color: #c47060; font-size: 13px;">${avalanche.error}</span>`;
+        return;
+    }
+
+    let interestDiff = snowball.totalInterest - avalanche.totalInterest;
+
+    container.innerHTML = `
+        <div style="margin-top: 15px; padding: 15px; background: rgba(255, 255, 255, 0.2); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.3);">
+            <h4 style="margin: 0 0 10px 0; color: #4a3a4a;"><i class="fas fa-calculator"></i> Payoff Simulator Results</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; font-size: 13px;">
+                <div style="background: rgba(255,255,255,0.3); padding: 10px; border-radius: 12px;">
+                    <strong>Avalanche Method</strong><br>
+                     ${avalanche.months} months (${avalanche.years} yrs)<br>
+                    Interest: R${avalanche.totalInterest.toFixed(2)}
+                </div>
+                <div style="background: rgba(255,255,255,0.3); padding: 10px; border-radius: 12px;">
+                    <strong>Snowball Method</strong><br>
+                    ${snowball.months} months (${snowball.years} yrs)<br>
+                    Interest: R${snowball.totalInterest.toFixed(2)}
+                </div>
+            </div>
+            <p style="font-size: 12px; color: #555; margin: 0;">
+                 <strong>AI Recommendation:</strong> ${interestDiff > 100 ? `The <strong>Avalanche method</strong> saves you approximately <strong>R${interestDiff.toFixed(2)}</strong> in total interest compared to Snowball.` : `Both methods yield similar timelines, but Snowball gives you quick psychological wins by clearing smaller balances first.`}
+            </p>
+        </div>
+    `;
 }
 
 // ============================================
@@ -2081,6 +2287,54 @@ function exportReportToPDF() {
             alert('Failed to generate PDF.');
         }
     });
+}
+
+// ============================================
+// LIVE AI COACH (FIN) INTEGRATION
+// ============================================
+async function fetchAICoachAdvice(debts, monthlyBudget) {
+    const aiEl = document.getElementById('aiRecommendation');
+    if (!aiEl) return;
+
+    if (!debts || debts.length === 0) {
+        aiEl.innerHTML = "Hey! Add your debts above, and I'll help you map out a custom strategy. You've got this!";
+        return;
+    }
+
+    aiEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Fin is analyzing your strategy...`;
+
+    try {
+        const response = await fetch(REPORT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                promptType: 'debt_coach',
+                debts: debts,
+                monthlyBudget: monthlyBudget || 0,
+                userGoal: 'Provide encouraging, friendly AI coaching to pay off debt'
+            })
+        });
+
+        if (!response.ok) throw new Error('AI Coach backend error');
+
+        const data = await response.json();
+        
+        // Render the AI-generated response from your backend
+        if (data && (data.summary || data.response)) {
+            aiEl.innerHTML = escapeHtml(data.summary || data.response);
+        } else {
+            renderSmartCoachFallback(debts, monthlyBudget, aiEl);
+        }
+    } catch (error) {
+        console.error('AI Coach Connection Error:', error);
+        // Fallback to intelligent dynamic phrasing if offline
+        renderSmartCoachFallback(debts, monthlyBudget, aiEl);
+    }
+}
+
+function renderSmartCoachFallback(debts, monthlyBudget, aiEl) {
+    const highest = debts.reduce((max, d) => (d.rate || 0) > (max.rate || 0) ? d : max, debts[0]);
+    aiEl.innerHTML = `Let's crush this together! Focus your extra cash on <strong>${escapeHtml(highest.name)}</strong> (${highest.rate}% interest) first. With R${monthlyBudget} budgeted monthly, you're well on your way!`;
 }
 
 // Force reset function (run in console if needed)
