@@ -60,7 +60,7 @@ Return plain text only without Markdown headers.`;
     // OpenRouter fallback sequence starting with auto-router
     const models = [
         'openrouter/auto',
-        'google/gemini-2.0-flash-lite-001',
+        // 'google/gemini-2.0-flash-lite-001',
         'meta-llama/llama-3.3-70b-instruct:free',
         // 'deepseek/deepseek-r1:free'
     ];
