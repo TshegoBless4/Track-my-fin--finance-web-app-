@@ -12,8 +12,7 @@ export default async function handler(req, res) {
         'Access-Control-Allow-Headers',
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
     );
-
-    if (req.method === 'OPTIONS') {
+if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
@@ -21,13 +20,24 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { month, income, expenses, remaining, categories, topTransactions, userGoal } = req.body || {};
+    const { promptType, month, income, expenses, remaining, categories, topTransactions, userGoal, debts, monthlyBudget } = req.body || {};
 
-    if (!month) {
-        return res.status(400).json({ error: 'Month parameter is required' });
-    }
+    let prompt = '';
 
-    const prompt = `You are a personal finance assistant in South Africa.
+    if (promptType === 'debt_coach') {
+        prompt = `You are Fin, a friendly and encouraging personal finance AI coach in South Africa.
+Analyze the user's debts and monthly budget to provide a short, motivating, and actionable debt-payoff strategy (using the avalanche or snowball method where appropriate).
+Debts: ${JSON.stringify(debts)}
+Monthly Budget for Debt: R${monthlyBudget}
+User Goal: ${userGoal}
+
+Keep it conversational, warm, and concise (under 4 paragraphs). Return plain text only without Markdown headers.`;
+    } else {
+        if (!month) {
+            return res.status(400).json({ error: 'Month parameter is required' });
+        }
+
+        prompt = `You are a personal finance assistant in South Africa.
 Write a personalized 3-paragraph financial summary for ${month}.
 
 Data:
@@ -45,6 +55,7 @@ Paragraph 2: Highlight spending breakdown and key observations.
 Paragraph 3: Provide 2 actionable recommendations toward their goal.
 
 Return plain text only without Markdown headers.`;
+    }
 
     // OpenRouter fallback sequence starting with auto-router
     const models = [
