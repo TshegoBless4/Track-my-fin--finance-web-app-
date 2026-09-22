@@ -62,7 +62,7 @@ Return plain text only without Markdown headers.`;
         'openrouter/auto',
         'google/gemini-2.0-flash-lite-001',
         'meta-llama/llama-3.3-70b-instruct:free',
-        'deepseek/deepseek-r1:free'
+        // 'deepseek/deepseek-r1:free'
     ];
 
     if (OPENROUTER_API_KEY) {
@@ -81,7 +81,7 @@ Return plain text only without Markdown headers.`;
                     body: JSON.stringify({
                         model: model,
                         messages: [{ role: 'user', content: prompt }],
-                        max_tokens: 500,
+                        max_tokens: 1500,
                         temperature: 0.5
                     })
                 });
