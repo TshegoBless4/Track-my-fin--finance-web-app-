@@ -39,7 +39,10 @@ Respond strictly in valid JSON format with no markdown or thought tags:
     const models = [
         'meta-llama/llama-3.3-70b-instruct:free',
         'deepseek/deepseek-r1-distill-llama-70b:free',
-        'google/gemini-2.0-flash-lite-preview-02-05:free'
+        'google/gemini-2.0-flash-lite-preview-02-05:free',
+        'openrouter/free',
+        'nvidia/nemotron-3-ultra-550b-a55b:free',
+        'cohere/north-mini-code:free'
     ];
 
     for (const model of models) {

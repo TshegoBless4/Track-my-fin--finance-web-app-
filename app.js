@@ -28,7 +28,7 @@ let categoryChart = null;
 const SAMPLE_DATA_KEY = 'trackmyfin_sample_loaded';
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('transactionList')) displayTransactions();
+    if (document.getElementById('transactionList')) updateTransactionList();
     if (document.getElementById('categoryChart')) updateDashboardSummary();
     if (document.getElementById('debtList')) displayDebts();
     if (document.getElementById('budgetProgressDisplay')) loadBudgets();
