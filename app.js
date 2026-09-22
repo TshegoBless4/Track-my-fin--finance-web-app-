@@ -278,18 +278,36 @@ async function addTransaction(event) {
         addBtn.disabled = true;
     }
     
-    const result = await categorizeTransaction(description, amount, type);
+    // 1. Check if a custom rule matches this description first
+    const matchedRuleCategory = getCategoryForDescription(description);
+    
+    let category, confidence, needsReview, source;
+    
+    if (matchedRuleCategory) {
+        // If a rule matches, use it immediately with 100% confidence
+        category = matchedRuleCategory;
+        confidence = 1.0;
+        needsReview = false;
+        source = 'user_rule';
+    } else {
+        // Otherwise, fall back to your normal AI / keyword categorization
+        const result = await categorizeTransaction(description, amount, type);
+        category = result.category;
+        confidence = result.confidence;
+        needsReview = result.needsReview;
+        source = result.source;
+    }
     
     transactions.unshift({
         id: Date.now(),
         date: new Date().toISOString().split('T')[0],
         description: description,
         amount: amount,
-        category: result.category,
-        confidence: result.confidence,
-        needsReview: result.needsReview,
-        reviewed: !result.needsReview,
-        source: result.source
+        category: category,
+        confidence: confidence,
+        needsReview: needsReview,
+        reviewed: !needsReview,
+        source: source
     });
     
     saveData();
@@ -300,11 +318,11 @@ async function addTransaction(event) {
         addBtn.disabled = false;
     }
     
-    if (result.needsReview) {
-        showToast(`Transaction "${description.substring(0, 30)}" needs review (${Math.round(result.confidence*100)}% confidence)`, 'warning');
+    if (needsReview) {
+        showToast(`Transaction "${description.substring(0, 30)}" needs review (${Math.round(confidence*100)}% confidence)`, 'warning');
         showReviewBanner(1);
     } else {
-        showToast(`Added: ${description.substring(0, 30)} → ${result.category}`, 'success');
+        showToast(`Added: ${description.substring(0, 30)} → ${category}`, 'success');
     }
     
     descEl.value = '';
@@ -404,22 +422,38 @@ async function uploadCSV() {
                 if (!isNaN(amount) && description) {
                     let formattedDate = formatDate(rawDate);
                     const txnType = amount > 0 ? 'income' : 'expense';
-                    const result = await categorizeTransaction(description, amount, txnType);
                     
+                    // Check custom rules first for CSV rows too
+                    const matchedRuleCategory = getCategoryForDescription(description);
+                    let category, confidence, needsReview, source;
+
+                    if (matchedRuleCategory) {
+                        category = matchedRuleCategory;
+                        confidence = 1.0;
+                        needsReview = false;
+                        source = 'user_rule';
+                    } else {
+                        const result = await categorizeTransaction(description, amount, txnType);
+                        category = result.category;
+                        confidence = result.confidence;
+                        needsReview = result.needsReview;
+                        source = result.source;
+                    }
+
                     transactions.unshift({
                         id: Date.now() + i,
                         date: formattedDate,
                         description: description,
                         amount: amount,
-                        category: result.category,
-                        confidence: result.confidence,
-                        needsReview: result.needsReview,
-                        reviewed: !result.needsReview,
-                        source: result.source
+                        category: category,
+                        confidence: confidence,
+                        needsReview: needsReview,
+                        reviewed: !needsReview,
+                        source: source
                     });
                     
                     addedCount++;
-                    if (result.needsReview) needsReviewCount++;
+                    if (needsReview) needsReviewCount++;
                 }
             }
         }
@@ -1307,9 +1341,26 @@ function addCustomCategory() {
     localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(categories));
     displayCustomCategories();
     updateAll();
-    showToast(`Category "${name}" added!`);
     
+    // --> ADD THIS LINE SO THE RULES DROPDOWN UPDATES INSTANTLY <--
+    if (typeof populateRuleCategories === 'function') populateRuleCategories();
+    
+    showToast(`Category "${name}" added!`);
     nameEl.value = '';
+}
+
+function removeCustomCategory(index) {
+    let categories = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
+    const removed = categories[index].name;
+    categories.splice(index, 1);
+    localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(categories));
+    displayCustomCategories();
+    updateAll();
+    
+    // --> ADD THIS LINE <--
+    if (typeof populateRuleCategories === 'function') populateRuleCategories();
+    
+    showToast(`Category "${removed}" removed`);
 }
 
 function displayCustomCategories() {
@@ -1326,10 +1377,50 @@ function displayCustomCategories() {
     container.innerHTML = categories.map((cat, index) => `
         <div style="background: rgba(255,255,255,0.12); padding: 12px 16px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid ${cat.color};">
             <span><i class="fas fa-circle" style="color:${cat.color}; margin-right:8px;"></i> ${escapeHtml(cat.name)}</span>
-            <button onclick="removeCustomCategory(${index})" class="btn-small" style="background: rgba(200,170,170,0.4);">Remove</button>
+            <div>
+                <button onclick="editCustomCategory('${cat.name}')" class="btn-secondary" style="padding: 4px 8px; font-size: 11px; margin-right: 5px;">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button onclick="removeCustomCategory(${index})" class="btn-small" style="background: rgba(200,170,170,0.4);">Remove</button>
+            </div>
         </div>
     `).join('');
 }
+
+function editCustomCategory(oldName) {
+    const newName = prompt("Enter the new category name:", oldName);
+    if (!newName || newName.trim() === "" || newName.trim() === oldName) return;
+
+    const trimmedNewName = newName.trim();
+
+    // 1. Update custom categories in localStorage using your app's key
+    let customCats = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
+    customCats = customCats.map(cat => {
+        if (typeof cat === 'object' && cat.name === oldName) {
+            cat.name = trimmedNewName;
+        }
+        return cat;
+    });
+    localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(customCats));
+
+    // 2. Update existing transactions using this category
+    let transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    transactions.forEach(t => {
+        if (t.category === oldName) {
+            t.category = trimmedNewName;
+        }
+    });
+    localStorage.setItem('transactions', JSON.stringify(transactions));
+
+    if (typeof showToast === 'function') {
+        showToast('Category updated successfully');
+    }
+    
+    // Refresh views
+    displayCustomCategories();
+    if (typeof populateRuleCategories === 'function') populateRuleCategories();
+}
+
 
 function removeCustomCategory(index) {
     let categories = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
@@ -1617,6 +1708,9 @@ function init() {
     if (document.getElementById('customCategoryList')) {
         displayCustomCategories();
     }
+    if (document.getElementById('ruleCategorySelect')) {
+        populateRuleCategories();
+    }
     
     console.log('Track My Fin ready.');
     if (!USE_REAL_API) {
@@ -1665,6 +1759,108 @@ function switchTab(tabName) {
     // Re-run the report generation function so data is re-rendered
     if (tabName === 'reports' && typeof generateReports === 'function') {
         generateReports();
+    }
+}
+
+// Populate category dropdown in the rules section
+function populateRuleCategories() {
+    const select = document.getElementById('ruleCategorySelect');
+    if (!select) return;
+    
+    const defaultCategories = ['Essential', 'Lifestyle', 'Financial'];
+    const customCats = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
+    const customNames = customCats.map(c => c.name || c);
+    
+    const allCats = [...defaultCategories, ...customNames];
+    select.innerHTML = allCats.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+}
+
+// Handle adding a new rule from settings
+function handleAddRule() {
+    const keywordInput = document.getElementById('ruleKeywordInput');
+    const categorySelect = document.getElementById('ruleCategorySelect');
+    
+    if (!keywordInput || !categorySelect) return;
+    
+    const keyword = keywordInput.value.trim();
+    const category = categorySelect.value;
+    
+    if (!keyword) {
+        if (typeof showToast === 'function') showToast('Please enter a keyword');
+        return;
+    }
+    
+    let rules = JSON.parse(localStorage.getItem('trackmyfin_rules') || '[]');
+    rules.push({ keyword: keyword.toLowerCase(), category });
+    localStorage.setItem('trackmyfin_rules', JSON.stringify(rules));
+    
+    keywordInput.value = '';
+    renderCustomRules();
+    if (typeof showToast === 'function') showToast('Rule added successfully');
+}
+
+// Render the list of rules in settings.html
+function renderCustomRules() {
+    const container = document.getElementById('customRulesContainer');
+    if (!container) return;
+    
+    const rules = JSON.parse(localStorage.getItem('trackmyfin_rules') || '[]');
+    
+    if (rules.length === 0) {
+        container.innerHTML = '<p style="color:#888; font-size: 13px; margin-top: 10px;"><i class="fas fa-info-circle"></i> No custom rules added yet.</p>';
+        return;
+    }
+    
+    container.innerHTML = rules.map((rule, index) => `
+        <div style="background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+            <span>If description contains <strong>"${rule.keyword}"</strong> &rarr; <span style="font-weight:600; color:#6058a3;">${rule.category}</span></span>
+            <button onclick="deleteRule(${index})" class="btn-small btn-danger" style="padding: 2px 6px; font-size: 11px;"><i class="fas fa-trash"></i></button>
+        </div>
+    `).join('');
+}
+
+// Delete an individual rule
+function deleteRule(index) {
+    let rules = JSON.parse(localStorage.getItem('trackmyfin_rules') || '[]');
+    rules.splice(index, 1);
+    localStorage.setItem('trackmyfin_rules', JSON.stringify(rules));
+    renderCustomRules();
+    if (typeof showToast === 'function') showToast('Rule deleted');
+}
+
+// Helper: Check description against all rules and return matching category
+function getCategoryForDescription(description) {
+    if (!description) return null;
+    const lowerDesc = description.toLowerCase();
+    const rules = JSON.parse(localStorage.getItem('trackmyfin_rules') || '[]');
+    
+    for (const rule of rules) {
+        if (lowerDesc.includes(rule.keyword.toLowerCase())) {
+            return rule.category;
+        }
+    }
+    return null;
+}
+
+// Apply rules to all existing transactions
+function applyRulesToExisting() {
+    let transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    let updatedCount = 0;
+    
+    transactions.forEach(t => {
+        const matchedCategory = getCategoryForDescription(t.description);
+        if (matchedCategory) {
+            t.category = matchedCategory;
+            updatedCount++;
+        }
+    });
+    
+    localStorage.setItem('transactions', JSON.stringify(transactions));
+    if (typeof showToast === 'function') {
+        showToast(`Applied rules to ${updatedCount} transactions`);
+    }
+    if (typeof updateAll === 'function') {
+        updateAll();
     }
 }
 
