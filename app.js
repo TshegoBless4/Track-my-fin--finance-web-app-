@@ -333,11 +333,43 @@ async function addTransaction(event) {
 // DELETE SINGLE TRANSACTION
 // ============================================
 // Delete a single transaction by ID
-function deleteTransaction(id) {
-    transactions = transactions.filter(t => t.id !== id);
-    saveData();
-    showToast('Transaction deleted');
-    updateAll();
+function generateTransactionId() {
+    return 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+}
+
+// Single-Transaction Deletion Handler
+function deleteTransaction(transactionId) {
+    // Filter out the target transaction
+    transactions = transactions.filter(t => t.id !== transactionId);
+
+    // Persist state and trigger cascading updates
+    saveAndSyncAppData();
+    
+    // User feedback toast
+    if (typeof showToast === 'function') {
+        showToast('Transaction deleted', 'success');
+    }
+}
+
+// Centralized State Sync Pipeline
+function saveAndSyncAppData() {
+    // Persist to localStorage safely
+    try {
+        localStorage.setItem('trackmyfin_data', JSON.stringify(transactions));
+    } catch (error) {
+        console.error("Failed to save data to localStorage:", error);
+    }
+
+    // Refresh UI components safely
+    if (typeof updateAll === 'function') {
+        updateAll();
+    } else {
+        // Fallback to individual updates if updateAll is missing
+        if (typeof updateSummary === 'function') updateSummary();
+        if (typeof updateTransactionList === 'function') updateTransactionList();
+        if (typeof updateBudgetDisplay === 'function') updateBudgetDisplay();
+        if (typeof updateChart === 'function') updateChart();
+    }
 }
 
 // Edge-case handler: Refund detection and duplicate checking
@@ -361,9 +393,105 @@ function processIncomingTransaction(tx, existingList) {
     return { transaction: tx, isDuplicate };
 }
 
+// ============================================
+// 2. CSV IMPORT & EDGE-CASE PROCESSOR
+// ============================================
+
+// Helper: Create a unique signature for duplicate checking
+function generateTransactionSignature(t) {
+    const cleanDate = t.date ? t.date.trim() : '';
+    const cleanAmount = parseFloat(t.amount || 0).toFixed(2);
+    const cleanMerchant = t.merchant ? t.merchant.trim().toUpperCase() : (t.description ? t.description.trim().toUpperCase() : '');
+    return `${cleanDate}_${cleanAmount}_${cleanMerchant}`;
+}
+
+// Robust CSV Import & Edge-Case Processor
+function processImportedTransactions(incomingRows) {
+    // Ensure existing transactions are loaded
+    let existingTransactions = JSON.parse(localStorage.getItem('trackmyfin_data')) || [];
+    
+    // Build a Set of existing signatures for O(1) lookup
+    const existingSignatures = new Set(existingTransactions.map(generateTransactionSignature));
+    
+    let addedCount = 0;
+    let potentialDuplicateCount = 0;
+    let refundCount = 0;
+
+    const processedBatch = [];
+
+    for (let row of incomingRows) {
+        // Ensure row has a unique ID
+        row.id = row.id || generateTransactionId();
+        
+        // Force EVERY imported transaction into the review queue for double-checking & categorization
+        row.needsReview = true; 
+        
+        // --- A. Duplicate Detection (Flag it instead of skipping) ---
+        const signature = generateTransactionSignature(row);
+        if (existingSignatures.has(signature)) {
+            potentialDuplicateCount++;
+            row.isPotentialDuplicate = true; // Marks it so your review UI can catch it
+        }
+        
+        // Add to set to catch duplicates within the same uploaded batch too
+        existingSignatures.add(signature);
+
+        // --- B. Refund & Reversal Handling ---
+        if (parseFloat(row.amount) > 0) {
+            const matchingExpenseIndex = existingTransactions.findIndex(ex => 
+                !ex.isRefunded &&
+                Math.abs(parseFloat(ex.amount)) === Math.abs(parseFloat(row.amount)) &&
+                (ex.merchant || ex.description).trim().toUpperCase() === (row.merchant || row.description).trim().toUpperCase()
+            );
+
+            if (matchingExpenseIndex !== -1) {
+                existingTransactions[matchingExpenseIndex].isRefunded = true;
+                row.isRefund = true;
+                row.linkedExpenseId = existingTransactions[matchingExpenseIndex].id;
+                refundCount++;
+            }
+        }
+
+        processedBatch.push(row);
+        addedCount++;
+    }
+
+    // Merge, update global array, and save/sync
+    transactions = [...existingTransactions, ...processedBatch];
+    saveAndSyncAppData();
+
+    // --- C. Force UI to Switch to / Refresh the Review Queue ---
+    // 1. Call your app's render/review functions if they exist
+    if (typeof renderReviewQueue === 'function') {
+        renderReviewQueue();
+    } else if (typeof renderTransactions === 'function') {
+        renderTransactions();
+    } else if (typeof renderApp === 'function') {
+        renderApp();
+    }
+
+    // 2. Unhide the review section/container if it uses standard CSS classes/IDs
+    const reviewSection = document.getElementById('review-section') || document.getElementById('review-tab-content');
+    if (reviewSection) {
+        reviewSection.style.display = 'block';
+        reviewSection.classList.remove('hidden');
+    }
+
+    // 3. Programmatically click the review navigation button if your UI uses tabs
+    const reviewNavBtn = document.querySelector('[data-target="review"], [data-view="review"], #nav-review-btn');
+    if (reviewNavBtn) {
+        reviewNavBtn.click();
+    }
+
+    console.log(`Import Complete: Added ${addedCount} rows to review queue (${potentialDuplicateCount} potential duplicates), Matched ${refundCount} refunds.`);
+    showToast(`Import Complete: ${addedCount} transactions sent to review queue.`, 'success');
+}
 
 // ============================================
 // UPLOAD CSV
+// ============================================
+// ============================================
+// UPLOAD CSV (CORRECTED)
 // ============================================
 async function uploadCSV() {
     const fileInput = document.getElementById('csvFile');
@@ -387,8 +515,7 @@ async function uploadCSV() {
     reader.onload = async function(e) {
         const content = e.target.result;
         const lines = content.split('\n');
-        let addedCount = 0;
-        let needsReviewCount = 0;
+        const incomingRows = [];
         
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
@@ -423,10 +550,10 @@ async function uploadCSV() {
                     let formattedDate = formatDate(rawDate);
                     const txnType = amount > 0 ? 'income' : 'expense';
                     
-                    // Check custom rules first for CSV rows too
+                    // --- REPLACED HARDCODED LOGIC WITH YOUR ACTUAL CATEGORIZATION & REVIEW PIPELINE ---
                     const matchedRuleCategory = getCategoryForDescription(description);
                     let category, confidence, needsReview, source;
-
+                    
                     if (matchedRuleCategory) {
                         category = matchedRuleCategory;
                         confidence = 1.0;
@@ -439,40 +566,31 @@ async function uploadCSV() {
                         needsReview = result.needsReview;
                         source = result.source;
                     }
-
-                    transactions.unshift({
-                        id: Date.now() + i,
+                    
+                    incomingRows.push({
+                        id: generateTransactionId(),
                         date: formattedDate,
                         description: description,
+                        merchant: description,
                         amount: amount,
                         category: category,
+                        type: txnType,
                         confidence: confidence,
                         needsReview: needsReview,
                         reviewed: !needsReview,
                         source: source
                     });
-                    
-                    addedCount++;
-                    if (needsReview) needsReviewCount++;
                 }
             }
         }
         
-        saveData();
-        updateAll();
+        // Pass collected rows into our robust batch processor
+        processImportedTransactions(incomingRows);
         
         if (uploadBtn) {
             uploadBtn.innerText = originalText;
             uploadBtn.disabled = false;
         }
-        
-        if (needsReviewCount > 0) {
-            showToast(`Added ${addedCount} transactions. ${needsReviewCount} need review.`, 'warning');
-            showReviewBanner(needsReviewCount);
-        } else {
-            showToast(`Added ${addedCount} transactions. All complete.`, 'success');
-        }
-        
         fileInput.value = '';
     };
     
@@ -710,11 +828,6 @@ function updateAll() {
     } else {
         hideReviewBanner();
     }
-}
-
-// Retained as an alias in case other parts of your code call updateSummary()
-function updateSummary() {
-    updateDashboardSummary();
 }
 
 // Retained as an alias in case other parts of your code call updateSummary()
@@ -1357,7 +1470,7 @@ function removeCustomCategory(index) {
     displayCustomCategories();
     updateAll();
     
-    // --> ADD THIS LINE <--
+    
     if (typeof populateRuleCategories === 'function') populateRuleCategories();
     
     showToast(`Category "${removed}" removed`);
@@ -1446,15 +1559,15 @@ function applyRulesToExisting() {
 
 
 
-function removeCustomCategory(index) {
-    let categories = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
-    const removed = categories[index].name;
-    categories.splice(index, 1);
-    localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(categories));
-    displayCustomCategories();
-    updateAll();
-    showToast(`Category "${removed}" removed`);
-}
+// function removeCustomCategory(index) {
+//     let categories = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
+//     const removed = categories[index].name;
+//     categories.splice(index, 1);
+//     localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(categories));
+//     displayCustomCategories();
+//     updateAll();
+//     showToast(`Category "${removed}" removed`);
+// }
 
 function exportAllData() {
     const data = {
@@ -1870,63 +1983,63 @@ function getCategoryForDescription(description) {
 }
 
 // Apply rules to all existing transactions
-function editCustomCategory(oldName) {
-    const newName = prompt("Enter the new category name:", oldName);
-    if (!newName || newName.trim() === "" || newName.trim() === oldName) return;
+// function editCustomCategory(oldName) {
+//     const newName = prompt("Enter the new category name:", oldName);
+//     if (!newName || newName.trim() === "" || newName.trim() === oldName) return;
 
-    const trimmedNewName = newName.trim();
+//     const trimmedNewName = newName.trim();
 
-    // 1. Update custom categories in localStorage
-    let customCats = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
-    customCats = customCats.map(cat => {
-        if (typeof cat === 'object' && cat.name === oldName) {
-            cat.name = trimmedNewName;
-        }
-        return cat;
-    });
-    localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(customCats));
+//     // 1. Update custom categories in localStorage
+//     let customCats = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
+//     customCats = customCats.map(cat => {
+//         if (typeof cat === 'object' && cat.name === oldName) {
+//             cat.name = trimmedNewName;
+//         }
+//         return cat;
+//     });
+//     localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(customCats));
 
-    // 2. FIXED: Use 'trackmyfin_data' instead of 'transactions'
-    let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
-    txs.forEach(t => {
-        if (t.category === oldName) {
-            t.category = trimmedNewName;
-        }
-    });
-    localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
+//     // 2. FIXED: Use 'trackmyfin_data' instead of 'transactions'
+//     let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
+//     txs.forEach(t => {
+//         if (t.category === oldName) {
+//             t.category = trimmedNewName;
+//         }
+//     });
+//     localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
 
-    if (typeof showToast === 'function') {
-        showToast('Category updated successfully');
-    }
+//     if (typeof showToast === 'function') {
+//         showToast('Category updated successfully');
+//     }
     
-    displayCustomCategories();
-    if (typeof populateRuleCategories === 'function') populateRuleCategories();
-    updateAll();
-}
+//     displayCustomCategories();
+//     if (typeof populateRuleCategories === 'function') populateRuleCategories();
+//     updateAll();
+// }
 
-function applyRulesToExisting() {
-    // FIXED: Use 'trackmyfin_data' instead of 'transactions'
-    let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
-    let updatedCount = 0;
+// function applyRulesToExisting() {
+//     // FIXED: Use 'trackmyfin_data' instead of 'transactions'
+//     let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
+//     let updatedCount = 0;
     
-    txs.forEach(t => {
-        const matchedCategory = getCategoryForDescription(t.description);
-        if (matchedCategory) {
-            t.category = matchedCategory;
-            updatedCount++;
-        }
-    });
+//     txs.forEach(t => {
+//         const matchedCategory = getCategoryForDescription(t.description);
+//         if (matchedCategory) {
+//             t.category = matchedCategory;
+//             updatedCount++;
+//         }
+//     });
     
-    localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
-    transactions = txs; // update global array
+//     localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
+//     transactions = txs; // update global array
     
-    if (typeof showToast === 'function') {
-        showToast(`Applied rules to ${updatedCount} transactions`);
-    }
-    if (typeof updateAll === 'function') {
-        updateAll();
-    }
-}
+//     if (typeof showToast === 'function') {
+//         showToast(`Applied rules to ${updatedCount} transactions`);
+//     }
+//     if (typeof updateAll === 'function') {
+//         updateAll();
+//     }
+// }
 
 function exportReportToPDF() {
     const element = document.getElementById('reportContent');
