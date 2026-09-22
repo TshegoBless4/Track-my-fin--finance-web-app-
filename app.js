@@ -1928,6 +1928,44 @@ function applyRulesToExisting() {
     }
 }
 
+function exportReportToPDF() {
+    const element = document.getElementById('reportContent');
+    const monthInput = document.getElementById('reportMonth')?.value || 'summary';
+    
+    // Validation check to ensure there's a valid report to export
+    if (!element || element.innerText.includes('Generating') || element.innerText.includes('Failed') || element.innerText.trim() === '') {
+        if (typeof showToast === 'function') {
+            showToast('Please generate a valid report first before exporting.');
+        } else {
+            alert('Please generate a valid report first before exporting.');
+        }
+        return;
+    }
+
+    // Configuration options for html2pdf
+    const options = {
+        margin:       10, // mm
+        filename:     `TrackMyFin_Report_${monthInput}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // Trigger download
+    html2pdf().from(element).set(options).save().then(() => {
+        if (typeof showToast === 'function') {
+            showToast('PDF exported successfully!');
+        }
+    }).catch(err => {
+        console.error('PDF Export Error:', err);
+        if (typeof showToast === 'function') {
+            showToast('Failed to generate PDF.');
+        } else {
+            alert('Failed to generate PDF.');
+        }
+    });
+}
+
 // Force reset function (run in console if needed)
 function forceResetEverything() {
     localStorage.clear();
