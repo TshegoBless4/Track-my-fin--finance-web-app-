@@ -1386,14 +1386,13 @@ function displayCustomCategories() {
         </div>
     `).join('');
 }
-
 function editCustomCategory(oldName) {
     const newName = prompt("Enter the new category name:", oldName);
     if (!newName || newName.trim() === "" || newName.trim() === oldName) return;
 
     const trimmedNewName = newName.trim();
 
-    // 1. Update custom categories in localStorage using your app's key
+    // 1. Update custom categories in localStorage
     let customCats = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
     customCats = customCats.map(cat => {
         if (typeof cat === 'object' && cat.name === oldName) {
@@ -1403,23 +1402,48 @@ function editCustomCategory(oldName) {
     });
     localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(customCats));
 
-    // 2. Update existing transactions using this category
-    let transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    transactions.forEach(t => {
+    // 2. FIXED: Use 'trackmyfin_data' instead of 'transactions'
+    let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
+    txs.forEach(t => {
         if (t.category === oldName) {
             t.category = trimmedNewName;
         }
     });
-    localStorage.setItem('transactions', JSON.stringify(transactions));
+    localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
 
     if (typeof showToast === 'function') {
         showToast('Category updated successfully');
     }
     
-    // Refresh views
     displayCustomCategories();
     if (typeof populateRuleCategories === 'function') populateRuleCategories();
+    updateAll();
 }
+
+function applyRulesToExisting() {
+    // FIXED: Use 'trackmyfin_data' instead of 'transactions'
+    let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
+    let updatedCount = 0;
+    
+    txs.forEach(t => {
+        const matchedCategory = getCategoryForDescription(t.description);
+        if (matchedCategory) {
+            t.category = matchedCategory;
+            updatedCount++;
+        }
+    });
+    
+    localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
+    transactions = txs; // update global array
+    
+    if (typeof showToast === 'function') {
+        showToast(`Applied rules to ${updatedCount} transactions`);
+    }
+    if (typeof updateAll === 'function') {
+        updateAll();
+    }
+}
+
 
 
 function removeCustomCategory(index) {
@@ -1455,6 +1479,7 @@ function exportAllData() {
 // ============================================
 // AI-POWERED REPORT GENERATION
 // ============================================
+
 async function generateReport() {
     const monthInput = document.getElementById('reportMonth')?.value;
     const reportContent = document.getElementById('reportContent');
@@ -1463,10 +1488,11 @@ async function generateReport() {
 
     reportContent.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Generating report for ${monthInput}...</div>`;
 
-    const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    const profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+    // FIXED: Use the correct LocalStorage keys ('trackmyfin_data' and 'trackmyfin_profile')
+    const savedTransactions = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
+    const profile = JSON.parse(localStorage.getItem('trackmyfin_profile') || '{}');
     
-    const monthTx = transactions.filter(t => t.date && t.date.startsWith(monthInput));
+    const monthTx = savedTransactions.filter(t => t.date && t.date.startsWith(monthInput));
     
     let income = 0;
     let expenses = 0;
@@ -1490,7 +1516,8 @@ async function generateReport() {
         .slice(0, 3);
 
     try {
-        const response = await fetch('/api/report', {
+        // FIXED: Use REPORT_URL instead of hardcoding '/api/report'
+        const response = await fetch(REPORT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1503,6 +1530,8 @@ async function generateReport() {
                 userGoal: profile.goal || 'Maintain financial health'
             })
         });
+
+        if (!response.ok) throw new Error('Failed to generate report from server');
 
         const data = await response.json();
         
@@ -1517,16 +1546,16 @@ async function generateReport() {
                 ${data.summary}
             </div>
         `;
+        
+        localStorage.setItem('lastGeneratedReport', JSON.stringify({
+            month: monthInput,
+            html: reportContent.innerHTML
+        }));
+
     } catch (err) {
         console.error('Report Generation Error:', err);
-        reportContent.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i> Failed to generate report. Please try again.</div>`;
+        reportContent.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i> Failed to generate report. Please check your backend connection.</div>`;
     }
-
-    
-localStorage.setItem('lastGeneratedReport', JSON.stringify({
-    month: monthInput,
-    html: reportContent.innerHTML
-}));
 }
 
 
@@ -1749,16 +1778,14 @@ function calculateCategoryTotals(transactions) {
 }
 
 function switchTab(tabName) {
-    // Hide all view sections
     document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
     
-    // Show the selected target view
     const target = document.getElementById(tabName);
     if (target) target.style.display = 'block';
 
-    // Re-run the report generation function so data is re-rendered
-    if (tabName === 'reports' && typeof generateReports === 'function') {
-        generateReports();
+    // FIXED: Call generateReport() (singular) instead of generateReports()
+    if (tabName === 'reports' && typeof generateReport === 'function') {
+        generateReport();
     }
 }
 
@@ -1843,11 +1870,46 @@ function getCategoryForDescription(description) {
 }
 
 // Apply rules to all existing transactions
+function editCustomCategory(oldName) {
+    const newName = prompt("Enter the new category name:", oldName);
+    if (!newName || newName.trim() === "" || newName.trim() === oldName) return;
+
+    const trimmedNewName = newName.trim();
+
+    // 1. Update custom categories in localStorage
+    let customCats = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
+    customCats = customCats.map(cat => {
+        if (typeof cat === 'object' && cat.name === oldName) {
+            cat.name = trimmedNewName;
+        }
+        return cat;
+    });
+    localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(customCats));
+
+    // 2. FIXED: Use 'trackmyfin_data' instead of 'transactions'
+    let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
+    txs.forEach(t => {
+        if (t.category === oldName) {
+            t.category = trimmedNewName;
+        }
+    });
+    localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
+
+    if (typeof showToast === 'function') {
+        showToast('Category updated successfully');
+    }
+    
+    displayCustomCategories();
+    if (typeof populateRuleCategories === 'function') populateRuleCategories();
+    updateAll();
+}
+
 function applyRulesToExisting() {
-    let transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    // FIXED: Use 'trackmyfin_data' instead of 'transactions'
+    let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
     let updatedCount = 0;
     
-    transactions.forEach(t => {
+    txs.forEach(t => {
         const matchedCategory = getCategoryForDescription(t.description);
         if (matchedCategory) {
             t.category = matchedCategory;
@@ -1855,7 +1917,9 @@ function applyRulesToExisting() {
         }
     });
     
-    localStorage.setItem('transactions', JSON.stringify(transactions));
+    localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
+    transactions = txs; // update global array
+    
     if (typeof showToast === 'function') {
         showToast(`Applied rules to ${updatedCount} transactions`);
     }
