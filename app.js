@@ -338,9 +338,10 @@ function generateTransactionId() {
 }
 
 // Single-Transaction Deletion Handler
+// Single-Transaction Deletion Handler
 function deleteTransaction(transactionId) {
-    // Filter out the target transaction
-    transactions = transactions.filter(t => t.id !== transactionId);
+    // Filter out the target transaction using String coercion to support both numeric and string IDs
+    transactions = transactions.filter(t => String(t.id) !== String(transactionId));
 
     // Persist state and trigger cascading updates
     saveAndSyncAppData();
@@ -405,91 +406,52 @@ function generateTransactionSignature(t) {
     return `${cleanDate}_${cleanAmount}_${cleanMerchant}`;
 }
 
-// Robust CSV Import & Edge-Case Processor
 function processImportedTransactions(incomingRows) {
-    // Ensure existing transactions are loaded
-    let existingTransactions = JSON.parse(localStorage.getItem('trackmyfin_data')) || [];
+    let existingTransactions = JSON.parse(localStorage.getItem('trackmyfin_data')) || transactions || [];
     
-    // Build a Set of existing signatures for O(1) lookup
+    // Build a Set of existing signatures for duplicate checking
     const existingSignatures = new Set(existingTransactions.map(generateTransactionSignature));
     
     let addedCount = 0;
     let potentialDuplicateCount = 0;
-    let refundCount = 0;
-
     const processedBatch = [];
 
     for (let row of incomingRows) {
-        // Ensure row has a unique ID
         row.id = row.id || generateTransactionId();
         
-        // Force EVERY imported transaction into the review queue for double-checking & categorization
-        row.needsReview = true; 
-        
-        // --- A. Duplicate Detection (Flag it instead of skipping) ---
         const signature = generateTransactionSignature(row);
         if (existingSignatures.has(signature)) {
             potentialDuplicateCount++;
-            row.isPotentialDuplicate = true; // Marks it so your review UI can catch it
+            row.isPotentialDuplicate = true; // Marked for Review Modal UI
         }
         
-        // Add to set to catch duplicates within the same uploaded batch too
+        // Add signature to catch duplicates within the same batch
         existingSignatures.add(signature);
 
-        // --- B. Refund & Reversal Handling ---
-        if (parseFloat(row.amount) > 0) {
-            const matchingExpenseIndex = existingTransactions.findIndex(ex => 
-                !ex.isRefunded &&
-                Math.abs(parseFloat(ex.amount)) === Math.abs(parseFloat(row.amount)) &&
-                (ex.merchant || ex.description).trim().toUpperCase() === (row.merchant || row.description).trim().toUpperCase()
-            );
-
-            if (matchingExpenseIndex !== -1) {
-                existingTransactions[matchingExpenseIndex].isRefunded = true;
-                row.isRefund = true;
-                row.linkedExpenseId = existingTransactions[matchingExpenseIndex].id;
-                refundCount++;
-            }
-        }
+        // Force into review queue
+        row.needsReview = true; 
+        row.reviewed = false;
 
         processedBatch.push(row);
         addedCount++;
     }
 
-    // Merge, update global array, and save/sync
-    transactions = [...existingTransactions, ...processedBatch];
+    // Append newly uploaded batch to existing transactions
+    transactions = [...processedBatch, ...existingTransactions];
     saveAndSyncAppData();
 
-    // --- C. Force UI to Switch to / Refresh the Review Queue ---
-    // 1. Call your app's render/review functions if they exist
-    if (typeof renderReviewQueue === 'function') {
-        renderReviewQueue();
-    } else if (typeof renderTransactions === 'function') {
-        renderTransactions();
-    } else if (typeof renderApp === 'function') {
-        renderApp();
+    // Trigger review banner & show pending reviews
+    const pendingCount = transactions.filter(t => t.needsReview && !t.reviewed).length;
+    showReviewBanner(pendingCount);
+    
+    if (potentialDuplicateCount > 0) {
+        showToast(`Imported ${addedCount} transactions (${potentialDuplicateCount} potential duplicates found)`, 'warning');
+    } else {
+        showToast(`Imported ${addedCount} transactions sent to review queue.`, 'success');
     }
 
-    // 2. Unhide the review section/container if it uses standard CSS classes/IDs
-    const reviewSection = document.getElementById('review-section') || document.getElementById('review-tab-content');
-    if (reviewSection) {
-        reviewSection.style.display = 'block';
-        reviewSection.classList.remove('hidden');
-    }
-
-    // 3. Programmatically click the review navigation button if your UI uses tabs
-    const reviewNavBtn = document.querySelector('[data-target="review"], [data-view="review"], #nav-review-btn');
-    if (reviewNavBtn) {
-        reviewNavBtn.click();
-    }
-
-    console.log(`Import Complete: Added ${addedCount} rows to review queue (${potentialDuplicateCount} potential duplicates), Matched ${refundCount} refunds.`);
-    showToast(`Import Complete: ${addedCount} transactions sent to review queue.`, 'success');
+    showPendingReviews();
 }
-
-// ============================================
-// UPLOAD CSV
-// ============================================
 // ============================================
 // UPLOAD CSV (CORRECTED)
 // ============================================
@@ -673,6 +635,7 @@ function showPendingReviews() {
     
     if (pendingTransactions.length === 0) {
         hideReviewBanner();
+        closeReviewModal();
         showToast('No pending reviews!', 'success');
         return;
     }
@@ -692,28 +655,47 @@ function showPendingReviews() {
     }
     
     modal.innerHTML = `
-        <div style="background: rgba(255,255,255,0.25); backdrop-filter: blur(20px); padding: 28px; border-radius: 36px; max-width: 600px; width: 90%; max-height: 80%; overflow-y: auto; border: 1px solid rgba(255,255,255,0.4);">
-            <h3 style="color: #4a3a4a; margin-bottom: 15px;"><i class="fas fa-edit"></i> Review Transactions (${pendingTransactions.length})</h3>
-            <p style="margin-bottom: 15px; color: #5a4a5a;">These transactions have low confidence scores. Please verify each one.</p>
+        <div style="background: rgba(255,255,255,0.25); backdrop-filter: blur(20px); padding: 28px; border-radius: 36px; max-width: 650px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.4); color: #2c2c2a;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="color: #4a3a4a; margin: 0;"><i class="fas fa-edit"></i> Review Transactions (${pendingTransactions.length})</h3>
+                <button onclick="closeReviewModal()" style="background: transparent; border: none; font-size: 18px; cursor: pointer; color: #5a4a5a;">&times;</button>
+            </div>
+            <p style="margin-bottom: 15px; color: #5a4a5a; font-size: 14px;">Review and approve transactions individually or clear duplicate uploads.</p>
             
             <div id="pendingReviewsList">
                 ${pendingTransactions.map(t => `
-                    <div id="review-${t.id}" style="border: 1px solid rgba(255,255,255,0.2); padding: 15px; margin-bottom: 12px; border-radius: 24px; background: rgba(255,255,255,0.1);">
-                        <p><strong>${escapeHtml(t.description)}</strong></p>
-                        <p>Amount: R${Math.abs(t.amount).toFixed(2)} | Confidence: ${Math.round(t.confidence * 100)}%</p>
-                        <p>Suggested: <strong>${t.category}</strong></p>
-                        <select id="cat-${t.id}" style="padding: 8px; border-radius: 40px; margin-top: 8px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: #2c2c2a;">
-                            ${getAllCategories().map(cat => 
-                                `<option ${t.category === cat ? 'selected' : ''}>${cat}</option>`
-                            ).join('')}
-                        </select>
-                        <button onclick="approveTransaction(${t.id})" style="margin-left: 10px; padding: 6px 18px; background: linear-gradient(135deg, #6058a3 0%, #4a4283 100%); color: white; border: none; border-radius: 40px; cursor: pointer;">Approve</button>
+                    <div id="review-${t.id}" style="border: 1px solid ${t.isPotentialDuplicate ? 'rgba(229, 115, 115, 0.6)' : 'rgba(255,255,255,0.3)'}; padding: 15px; margin-bottom: 12px; border-radius: 24px; background: ${t.isPotentialDuplicate ? 'rgba(255, 180, 180, 0.2)' : 'rgba(255,255,255,0.15)'};">
+                        
+                        ${t.isPotentialDuplicate ? `
+                            <div style="display:inline-block; background: rgba(211, 47, 47, 0.85); color: white; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-bottom: 8px;">
+                                 Potential Duplicate
+                            </div>
+                        ` : ''}
+
+                        <p style="margin: 4px 0;"><strong>${escapeHtml(t.description)}</strong></p>
+                        <p style="margin: 4px 0; font-size: 13px; color: #5a4a5a;">Date: ${t.date} | Amount: <strong>R${Math.abs(t.amount).toFixed(2)}</strong> | Confidence: ${Math.round((t.confidence || 0.8) * 100)}%</p>
+                        
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                            <label style="font-size: 12px; color: #5a4a5a;">Category:</label>
+                            <select id="cat-${t.id}" style="padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.4); color: #2c2c2a; font-size: 13px;">
+                                ${getAllCategories().map(cat => 
+                                    `<option value="${cat}" ${t.category === cat ? 'selected' : ''}>${cat}</option>`
+                                ).join('')}
+                            </select>
+                            
+                            <button onclick="approveTransaction('${t.id}')" style="padding: 6px 16px; background: linear-gradient(135deg, #6058a3 0%, #4a4283 100%); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 13px;">
+                                Approve
+                            </button>
+                            <button onclick="skipReviewTransaction('${t.id}')" style="padding: 6px 12px; background: rgba(196, 112, 96, 0.9); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 13px;">
+                                Delete / Ignore
+                            </button>
+                        </div>
                     </div>
                 `).join('')}
             </div>
             
             <div style="display: flex; gap: 12px; margin-top: 20px;">
-                <button onclick="approveAllPending()" style="flex:1; background: linear-gradient(135deg, #6058a3 0%, #4a4283 100%); color: white; border: none; padding: 12px 28px; border-radius: 40px; cursor: pointer; font-weight: 600;">Approve All</button>
+                <button onclick="approveAllPending()" style="flex:1; background: linear-gradient(135deg, #6058a3 0%, #4a4283 100%); color: white; border: none; padding: 12px 28px; border-radius: 40px; cursor: pointer; font-weight: 600;">Approve All Remaining</button>
                 <button onclick="closeReviewModal()" style="flex:1; background: rgba(255,255,255,0.3); color: #4a3a4a; border: 1px solid rgba(255,255,255,0.4); padding: 12px 28px; border-radius: 40px; cursor: pointer; font-weight: 600;">Close</button>
             </div>
         </div>
@@ -722,28 +704,49 @@ function showPendingReviews() {
 }
 
 function approveTransaction(id) {
-    const transaction = transactions.find(t => t.id === id);
+    // String matching handles both numeric IDs and generated string UUIDs
+    const transaction = transactions.find(t => String(t.id) === String(id));
     if (transaction) {
         const catSelect = document.getElementById(`cat-${id}`);
         if (catSelect) transaction.category = catSelect.value;
         
         transaction.needsReview = false;
         transaction.reviewed = true;
+        transaction.isPotentialDuplicate = false;
         transaction.source = 'user_reviewed';
-        saveData();
+        
+        saveAndSyncAppData();
         
         const element = document.getElementById(`review-${id}`);
         if (element) element.remove();
         
-        const remaining = document.querySelectorAll('#pendingReviewsList > div').length;
+        const remaining = transactions.filter(t => t.needsReview && !t.reviewed).length;
         if (remaining === 0) {
             closeReviewModal();
             hideReviewBanner();
-            updateAll();
             showToast('All transactions reviewed!', 'success');
         } else {
-            updateAll();
+            showReviewBanner(remaining);
         }
+    }
+}
+
+function skipReviewTransaction(id) {
+    // Remove the transaction from the array
+    transactions = transactions.filter(t => String(t.id) !== String(id));
+    saveAndSyncAppData();
+    
+    // Remove its element from the modal UI
+    const element = document.getElementById(`review-${id}`);
+    if (element) element.remove();
+    
+    const remaining = transactions.filter(t => t.needsReview && !t.reviewed).length;
+    if (remaining === 0) {
+        closeReviewModal();
+        hideReviewBanner();
+        showToast('All pending transactions resolved!', 'success');
+    } else {
+        showReviewBanner(remaining);
     }
 }
 
@@ -752,10 +755,11 @@ function approveAllPending() {
     pending.forEach(t => {
         t.needsReview = false;
         t.reviewed = true;
+        t.isPotentialDuplicate = false;
         t.source = 'user_reviewed';
     });
-    saveData();
-    updateAll();
+    
+    saveAndSyncAppData();
     closeReviewModal();
     hideReviewBanner();
     showToast(`Approved all ${pending.length} transactions`, 'success');
@@ -984,20 +988,20 @@ function updateTransactionList() {
         return;
     }
     
-    container.innerHTML = filtered.map(t => `
+   container.innerHTML = filtered.map(t => `
         <div class="transaction-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.2); flex-wrap: wrap; gap: 8px; background: rgba(255,255,255,0.12); backdrop-filter: blur(8px); border-radius: 24px; margin-bottom: 10px;">
             <span style="min-width: 100px; font-size: 12px; color: #888;">${t.date}</span>
             <span style="flex: 2; font-weight: 500; color: #2c2c2a;">${escapeHtml(t.description.substring(0, 40))}</span>
             <span style="min-width: 100px; text-align: right; font-weight: 600; color: ${t.amount > 0 ? '#6a8a6a' : '#c47060'}">
                 ${t.amount > 0 ? '+' : ''}R${Math.abs(t.amount).toFixed(2)}
             </span>
-            <select onchange="updateTransactionCategory(${t.id}, this.value)" style="padding: 5px 12px; border-radius: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: #2c2c2a;">
+            <select onchange="updateTransactionCategory('${t.id}', this.value)" style="padding: 5px 12px; border-radius: 30px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: #2c2c2a;">
                 ${getAllCategories().map(cat => 
                     `<option ${t.category === cat ? 'selected' : ''}>${cat}</option>`
                 ).join('')}
             </select>
             ${t.needsReview && !t.reviewed ? '<span style="background: #f4b1b4; color: #4a3a4a; padding:2px 10px; border-radius: 20px; font-size:10px;"><i class="fas fa-flag"></i> Needs Review</span>' : ''}
-            <button class="delete-btn" onclick="deleteTransaction(${t.id})" title="Delete transaction">
+            <button class="delete-btn" onclick="deleteTransaction('${t.id}')" title="Delete transaction">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
