@@ -2303,33 +2303,39 @@ async function fetchAICoachAdvice(debts, monthlyBudget) {
 
     aiEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Fin is analyzing your strategy...`;
 
-    try {
-        const response = await fetch(REPORT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                promptType: 'debt_coach',
-                debts: debts,
-                monthlyBudget: monthlyBudget || 0,
-                userGoal: 'Provide encouraging, friendly AI coaching to pay off debt'
-            })
-        });
+   try {
+    // Define your payload object here
+    const payloadData = {
+        promptType: 'debt_coach',
+        debts: debts,
+        monthlyBudget: monthlyBudget || 0,
+        userGoal: 'Provide encouraging, friendly AI coaching to pay off debt'
+    };
 
-        if (!response.ok) throw new Error('AI Coach backend error');
+    // Add your log right before the fetch() call:
+    console.log("Data I am sending to Fin:", JSON.stringify(payloadData));
 
-        const data = await response.json();
-        
-        // Render the AI-generated response from your backend
-        if (data && (data.summary || data.response)) {
-            aiEl.innerHTML = escapeHtml(data.summary || data.response);
-        } else {
-            renderSmartCoachFallback(debts, monthlyBudget, aiEl);
-        }
-    } catch (error) {
-        console.error('AI Coach Connection Error:', error);
-        // Fallback to intelligent dynamic phrasing if offline
+    const response = await fetch(REPORT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payloadData)
+    });
+
+    if (!response.ok) throw new Error('AI Coach backend error');
+
+    const data = await response.json();
+    
+    // Render the AI-generated response from your backend
+    if (data && (data.summary || data.response)) {
+        aiEl.innerHTML = escapeHtml(data.summary || data.response);
+    } else {
         renderSmartCoachFallback(debts, monthlyBudget, aiEl);
     }
+} catch (error) {
+    console.error('AI Coach Connection Error:', error);
+    // Fallback to intelligent dynamic phrasing if offline
+    renderSmartCoachFallback(debts, monthlyBudget, aiEl);
+}
 }
 
 function renderSmartCoachFallback(debts, monthlyBudget, aiEl) {
