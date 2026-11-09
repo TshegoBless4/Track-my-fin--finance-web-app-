@@ -1,6 +1,4 @@
-// ============================================
-// TRACK MY FIN - AI REPORT API ENDPOINT
-// ============================================
+
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
@@ -12,7 +10,7 @@ export default async function handler(req, res) {
         'Access-Control-Allow-Headers',
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
     );
-if (req.method === 'OPTIONS') {
+    if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
@@ -26,7 +24,7 @@ if (req.method === 'OPTIONS') {
 
     if (promptType === 'debt_coach') {
         prompt = `You are Fin, a friendly and encouraging personal finance AI coach in South Africa.
-Analyze the user's debts and monthly budget to provide a short, motivating, and actionable debt-payoff strategy (using the avalanche or snowball method where appropriate).
+Analyze the user's debts and monthly budget to provide a short, motivating, and actionable debt-payoff strategy.
 Debts: ${JSON.stringify(debts)}
 Monthly Budget for Debt: R${monthlyBudget}
 User Goal: ${userGoal}
@@ -57,12 +55,9 @@ Paragraph 3: Provide 2 actionable recommendations toward their goal.
 Return plain text only without Markdown headers.`;
     }
 
-    // OpenRouter fallback sequence starting with auto-router
     const models = [
         'openrouter/auto',
-        // 'google/gemini-2.0-flash-lite-001',
-        'meta-llama/llama-3.3-70b-instruct:free',
-        // 'deepseek/deepseek-r1:free'
+        'meta-llama/llama-3.3-70b-instruct:free'
     ];
 
     if (OPENROUTER_API_KEY) {
@@ -107,13 +102,18 @@ Return plain text only without Markdown headers.`;
         }
     }
 
-    // Rule-based fallback if all API routes fail
+    const formattedRemaining = Number(remaining).toFixed(2);
+    const absoluteRemaining = Math.abs(Number(remaining)).toFixed(2);
+    const balanceDescription = Number(remaining) >= 0 
+        ? `a net positive balance of R${formattedRemaining}` 
+        : `a net deficit of R${absoluteRemaining}`;
+
     return res.status(200).json({
-        summary: `During ${month}, you brought in R${Number(income).toFixed(2)} in total income against R${Number(expenses).toFixed(2)} in total expenses, leaving you with a net positive balance of R${Number(remaining).toFixed(2)}.
+        summary: `During ${month}, you brought in R${Number(income).toFixed(2)} in total income against R${Number(expenses).toFixed(2)} in total expenses, leaving you with ${balanceDescription}.
 
 Your primary expense distribution shows R${Number(categories?.Essential || 0).toFixed(2)} spent on Essential needs, R${Number(categories?.Lifestyle || 0).toFixed(2)} on Lifestyle, and R${Number(categories?.Financial || 0).toFixed(2)} toward Financial obligations. Keeping lifestyle costs measured against essential requirements is a great indicator of financial awareness.
 
-To align with your goal of "${userGoal || 'maintaining balance'}", consider allocating at least 20% of your remaining R${Number(remaining).toFixed(2)} (approx. R${(Number(remaining) * 0.2).toFixed(2)}) directly toward savings or debt clearance at the start of the month before discretionary spending begins.`,
+To align with your goal of "${userGoal || 'maintaining balance'}", consider allocating at least 20% of your available funds directly toward savings or debt clearance at the start of the month before discretionary spending begins.`,
         source: 'rule-based'
     });
 }

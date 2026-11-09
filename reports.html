@@ -30,7 +30,7 @@
                 <button onclick="generateReport()"><i class="fas fa-file-alt"></i> Generate Report</button>
                 <button onclick="exportCSV()" class="btn-secondary"><i class="fas fa-file-csv"></i> Export CSV</button>
                 
-                <!-- ADDED: Export PDF Button -->
+               
                 <button onclick="exportReportToPDF()" class="btn-primary"><i class="fas fa-file-pdf"></i> Export PDF</button>
             </div>
         </div>
@@ -44,8 +44,10 @@
 
     </div>
 
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+   
     <script src="app.js"></script>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
 </html>

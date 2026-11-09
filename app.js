@@ -1,10 +1,7 @@
-// ============================================
-// TRACK MY FIN - COMPLETE APP
-// ============================================
 
-// ============================================
-// API CONFIGURATION
-// ============================================
+// TRACK MY FIN - COMPLETE APP.JS (BETA FINAL)
+
+
 const isLocal = window.location.hostname === 'localhost' || 
                 window.location.hostname === '127.0.0.1';
 
@@ -20,9 +17,9 @@ let USE_REAL_API = true;
 console.log('Using categorize URL:', API_URL);
 console.log('Using report URL:', REPORT_URL);
 
-// ============================================
+
 // DATA STORAGE
-// ============================================
+
 let transactions = [];      
 let categoryChart = null;
 const SAMPLE_DATA_KEY = 'trackmyfin_sample_loaded';
@@ -51,13 +48,13 @@ function saveData() {
     localStorage.setItem('trackmyfin_data', JSON.stringify(transactions));
 }
 
-// ============================================
+
 // CATEGORY HELPERS
-// ============================================
+
 function getAllCategories() {
     const defaults = ['Essential', 'Lifestyle', 'Financial', 'Income'];
     const custom = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]')
-        .map(c => c.name);
+        .map(c => (typeof c === 'object' ? c.name : c));
     return [...defaults, ...custom];
 }
 
@@ -71,13 +68,13 @@ function getCategoryColor(categoryName) {
     if (defaultColors[categoryName]) return defaultColors[categoryName];
     
     const custom = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
-    const match = custom.find(c => c.name === categoryName);
-    return match ? match.color : '#888888';
+    const match = custom.find(c => (c.name || c) === categoryName);
+    return match && match.color ? match.color : '#888888';
 }
 
-// ============================================
+
 // AI CATEGORIZATION CALL
-// ============================================
+
 async function categorizeWithAPI(description, amount, type) {
     if (!USE_REAL_API) return null;
     
@@ -114,9 +111,9 @@ async function categorizeWithAPI(description, amount, type) {
     }
 }
 
-// ============================================
+
 // KEYWORD FALLBACK
-// ============================================
+
 function categorizeWithKeywords(description, type) {
     if (type === 'income') {
         return { category: 'Income', confidence: 0.9 };
@@ -156,9 +153,9 @@ function categorizeWithKeywords(description, type) {
     return { category: 'Lifestyle', confidence: 0.55 };
 }
 
-// ============================================
+
 // CHECK IF NEEDS REVIEW
-// ============================================
+
 function needsReview(confidence, description) {
     const desc = description.toLowerCase();
     if (desc.includes('payment') || desc.includes('transfer') || desc.includes('online')) {
@@ -167,9 +164,9 @@ function needsReview(confidence, description) {
     return confidence < 0.7;
 }
 
-// ============================================
+
 // MAIN CATEGORIZATION
-// ============================================
+
 async function categorizeTransaction(description, amount, type) {
     if (type === 'income') {
         return {
@@ -203,9 +200,9 @@ async function categorizeTransaction(description, amount, type) {
     };
 }
 
-// ============================================
-// DATE FORMATTER
-// ============================================
+
+// DATE FORMATTER (Local timezone preserved)
+
 function formatDate(rawDate) {
     if (!rawDate) return new Date().toISOString().split('T')[0];
     
@@ -248,9 +245,9 @@ function formatDate(rawDate) {
     return new Date().toISOString().split('T')[0];
 }
 
-// ============================================
+
 // ADD MANUAL TRANSACTION
-// ============================================
+
 async function addTransaction(event) {
     const descEl = document.getElementById('descInput');
     const amountEl = document.getElementById('amountInput');
@@ -278,19 +275,15 @@ async function addTransaction(event) {
         addBtn.disabled = true;
     }
     
-    // 1. Check if a custom rule matches this description first
     const matchedRuleCategory = getCategoryForDescription(description);
-    
     let category, confidence, needsReview, source;
     
     if (matchedRuleCategory) {
-        // If a rule matches, use it immediately with 100% confidence
         category = matchedRuleCategory;
         confidence = 1.0;
         needsReview = false;
         source = 'user_rule';
     } else {
-        // Otherwise, fall back to your normal AI / keyword categorization
         const result = await categorizeTransaction(description, amount, type);
         category = result.category;
         confidence = result.confidence;
@@ -310,8 +303,7 @@ async function addTransaction(event) {
         source: source
     });
     
-    saveData();
-    updateAll();
+    saveAndSyncAppData();
     
     if (addBtn) {
         addBtn.innerText = originalText;
@@ -329,24 +321,17 @@ async function addTransaction(event) {
     amountEl.value = '';
 }
 
-// ============================================
+
 // DELETE SINGLE TRANSACTION
-// ============================================
-// Delete a single transaction by ID
+
 function generateTransactionId() {
     return 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
 }
 
-// Single-Transaction Deletion Handler
-// Single-Transaction Deletion Handler
 function deleteTransaction(transactionId) {
-    // Filter out the target transaction using String coercion to support both numeric and string IDs
     transactions = transactions.filter(t => String(t.id) !== String(transactionId));
-
-    // Persist state and trigger cascading updates
     saveAndSyncAppData();
     
-    // User feedback toast
     if (typeof showToast === 'function') {
         showToast('Transaction deleted', 'success');
     }
@@ -354,51 +339,20 @@ function deleteTransaction(transactionId) {
 
 // Centralized State Sync Pipeline
 function saveAndSyncAppData() {
-    // Persist to localStorage safely
     try {
         localStorage.setItem('trackmyfin_data', JSON.stringify(transactions));
     } catch (error) {
         console.error("Failed to save data to localStorage:", error);
     }
 
-    // Refresh UI components safely
     if (typeof updateAll === 'function') {
         updateAll();
-    } else {
-        // Fallback to individual updates if updateAll is missing
-        if (typeof updateSummary === 'function') updateSummary();
-        if (typeof updateTransactionList === 'function') updateTransactionList();
-        if (typeof updateBudgetDisplay === 'function') updateBudgetDisplay();
-        if (typeof updateChart === 'function') updateChart();
     }
 }
 
-// Edge-case handler: Refund detection and duplicate checking
-function processIncomingTransaction(tx, existingList) {
-    const descLower = tx.description.toLowerCase();
-    
-    // Refund / Reversal detection
-    if (descLower.includes('refund') || descLower.includes('reversal') || descLower.includes('cashback')) {
-        tx.type = 'income';
-        tx.category = 'Income';
-        tx.amount = Math.abs(tx.amount);
-    }
 
-    // Duplicate Detection (Same date, amount, and description)
-    const isDuplicate = existingList.some(existing => 
-        existing.date === tx.date && 
-        Math.abs(existing.amount) === Math.abs(tx.amount) && 
-        existing.description.toLowerCase().trim() === tx.description.toLowerCase().trim()
-    );
+// BANK STATEMENT PROCESSOR (CSV & PDF with Batched AI Processing)
 
-    return { transaction: tx, isDuplicate };
-}
-
-// ============================================
-// 2. CSV IMPORT & EDGE-CASE PROCESSOR
-// ============================================
-
-// Helper: Create a unique signature for duplicate checking
 function generateTransactionSignature(t) {
     const cleanDate = t.date ? t.date.trim() : '';
     const cleanAmount = parseFloat(t.amount || 0).toFixed(2);
@@ -408,8 +362,6 @@ function generateTransactionSignature(t) {
 
 function processImportedTransactions(incomingRows) {
     let existingTransactions = JSON.parse(localStorage.getItem('trackmyfin_data')) || transactions || [];
-    
-    // Build a Set of existing signatures for duplicate checking
     const existingSignatures = new Set(existingTransactions.map(generateTransactionSignature));
     
     let addedCount = 0;
@@ -422,13 +374,11 @@ function processImportedTransactions(incomingRows) {
         const signature = generateTransactionSignature(row);
         if (existingSignatures.has(signature)) {
             potentialDuplicateCount++;
-            row.isPotentialDuplicate = true; // Marked for Review Modal UI
+            row.isPotentialDuplicate = true;
         }
         
-        // Add signature to catch duplicates within the same batch
         existingSignatures.add(signature);
 
-        // Force into review queue
         row.needsReview = true; 
         row.reviewed = false;
 
@@ -436,11 +386,9 @@ function processImportedTransactions(incomingRows) {
         addedCount++;
     }
 
-    // Append newly uploaded batch to existing transactions
     transactions = [...processedBatch, ...existingTransactions];
     saveAndSyncAppData();
 
-    // Trigger review banner & show pending reviews
     const pendingCount = transactions.filter(t => t.needsReview && !t.reviewed).length;
     showReviewBanner(pendingCount);
     
@@ -452,124 +400,239 @@ function processImportedTransactions(incomingRows) {
 
     showPendingReviews();
 }
-// ============================================
-// UPLOAD CSV (CORRECTED)
-// ============================================
-async function uploadCSV() {
-    const fileInput = document.getElementById('csvFile');
-    if (!fileInput) return;
+
+// PDF Statement Parsing Helper with Batched AI Categorization
+async function parsePDFStatement(file) {
+    if (typeof pdfjsLib === 'undefined') {
+        throw new Error('pdf.js library is not loaded. Please include pdf.min.js in your HTML.');
+    }
     
-    const file = fileInput.files[0];
-    if (!file) {
-        alert('Please select a CSV file');
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const lines = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        
+        const pageLines = pageText.split(/(?=\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})/);
+        lines.push(...pageLines);
+    }
+
+    const rawItems = [];
+    for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+
+        const match = line.match(/^(\d{4}-\d{2}-\d{2}|\d{2}[\/\-]\d{2}[\/\-]\d{4})\s+(.+?)\s+(-?R?\s*\d+(?:\.\d{2})?)$/i);
+        if (match) {
+            rawItems.push({
+                rawDate: match[1],
+                description: match[2].trim(),
+                amount: parseFloat(match[3].replace(/R|\s/g, ''))
+            });
+        }
+    }
+
+    // Process in parallel batches for speed while utilizing AI
+    const incomingRows = [];
+    const batchSize = 5;
+    for (let i = 0; i < rawItems.length; i += batchSize) {
+        const batch = rawItems.slice(i, i + batchSize);
+        const batchResults = await Promise.all(batch.map(async (item) => {
+            if (isNaN(item.amount) || !item.description) return null;
+            
+            const formattedDate = formatDate(item.rawDate);
+            const txnType = item.amount > 0 ? 'income' : 'expense';
+            const matchedRuleCategory = getCategoryForDescription(item.description);
+            let category, confidence, needsReview, source;
+
+            if (matchedRuleCategory) {
+                category = matchedRuleCategory;
+                confidence = 1.0;
+                needsReview = false;
+                source = 'user_rule';
+            } else {
+                const result = await categorizeTransaction(item.description, item.amount, txnType);
+                category = result.category;
+                confidence = result.confidence;
+                needsReview = result.needsReview;
+                source = result.source;
+            }
+
+            return {
+                id: generateTransactionId(),
+                date: formattedDate,
+                description: item.description,
+                merchant: item.description,
+                amount: item.amount,
+                category: category,
+                type: txnType,
+                confidence: confidence,
+                needsReview: needsReview,
+                reviewed: !needsReview,
+                source: source
+            };
+        }));
+        
+        incomingRows.push(...batchResults.filter(Boolean));
+    }
+
+    return incomingRows;
+}
+
+// Universal File Upload Handler with Batched AI Processing for CSV
+async function uploadStatement() {
+    const fileInput = document.getElementById('csvFile') || document.getElementById('statementFile');
+    if (!fileInput) {
+        alert('File input element not found in HTML.');
         return;
     }
     
-    const uploadBtn = document.getElementById('csvUploadBtn');
+    const file = fileInput.files[0];
+    if (!file) {
+        alert('Please select a CSV or PDF statement file');
+        return;
+    }
+    
+    const uploadBtn = document.getElementById('csvUploadBtn') || document.getElementById('uploadBtn');
     const originalText = uploadBtn ? uploadBtn.innerText : 'Process';
     
     if (uploadBtn) {
         uploadBtn.innerText = 'Processing...';
         uploadBtn.disabled = true;
     }
-    
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        const content = e.target.result;
-        const lines = content.split('\n');
-        const incomingRows = [];
-        
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
-            
-            if (i === 0 && (line.toLowerCase().includes('date') || line.toLowerCase().includes('description'))) {
-                continue;
+
+    try {
+        if (file.name.toLowerCase().endsWith('.pdf')) {
+            const incomingRows = await parsePDFStatement(file);
+            processImportedTransactions(incomingRows);
+            if (uploadBtn) {
+                uploadBtn.innerText = originalText;
+                uploadBtn.disabled = false;
             }
-            
-            let parts = [];
-            let inQuote = false;
-            let currentPart = '';
-            
-            for (let char of line) {
-                if (char === '"') {
-                    inQuote = !inQuote;
-                } else if (char === ',' && !inQuote) {
-                    parts.push(currentPart);
-                    currentPart = '';
-                } else {
-                    currentPart += char;
-                }
-            }
-            parts.push(currentPart);
-            
-            if (parts.length >= 3) {
-                let rawDate = parts[0].replace(/"/g, '').trim();
-                let description = parts[1].replace(/"/g, '').trim();
-                let amount = parseFloat(parts[2].replace(/"/g, '').trim());
+            fileInput.value = '';
+        } else {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n');
+                const rawItems = [];
                 
-                if (!isNaN(amount) && description) {
-                    let formattedDate = formatDate(rawDate);
-                    const txnType = amount > 0 ? 'income' : 'expense';
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
                     
-                    // --- REPLACED HARDCODED LOGIC WITH YOUR ACTUAL CATEGORIZATION & REVIEW PIPELINE ---
-                    const matchedRuleCategory = getCategoryForDescription(description);
-                    let category, confidence, needsReview, source;
-                    
-                    if (matchedRuleCategory) {
-                        category = matchedRuleCategory;
-                        confidence = 1.0;
-                        needsReview = false;
-                        source = 'user_rule';
-                    } else {
-                        const result = await categorizeTransaction(description, amount, txnType);
-                        category = result.category;
-                        confidence = result.confidence;
-                        needsReview = result.needsReview;
-                        source = result.source;
+                    if (i === 0 && (line.toLowerCase().includes('date') || line.toLowerCase().includes('description'))) {
+                        continue;
                     }
                     
-                    incomingRows.push({
-                        id: generateTransactionId(),
-                        date: formattedDate,
-                        description: description,
-                        merchant: description,
-                        amount: amount,
-                        category: category,
-                        type: txnType,
-                        confidence: confidence,
-                        needsReview: needsReview,
-                        reviewed: !needsReview,
-                        source: source
-                    });
+                    let parts = [];
+                    let inQuote = false;
+                    let currentPart = '';
+                    
+                    for (let char of line) {
+                        if (char === '"') {
+                            inQuote = !inQuote;
+                        } else if (char === ',' && !inQuote) {
+                            parts.push(currentPart);
+                            currentPart = '';
+                        } else {
+                            currentPart += char;
+                        }
+                    }
+                    parts.push(currentPart);
+                    
+                    if (parts.length >= 3) {
+                        rawItems.push({
+                            rawDate: parts[0].replace(/"/g, '').trim(),
+                            description: parts[1].replace(/"/g, '').trim(),
+                            amount: parseFloat(parts[2].replace(/"/g, '').trim())
+                        });
+                    }
                 }
-            }
+                
+                const incomingRows = [];
+                const batchSize = 5;
+                for (let i = 0; i < rawItems.length; i += batchSize) {
+                    const batch = rawItems.slice(i, i + batchSize);
+                    const batchResults = await Promise.all(batch.map(async (item) => {
+                        if (isNaN(item.amount) || !item.description) return null;
+                        
+                        let formattedDate = formatDate(item.rawDate);
+                        const txnType = item.amount > 0 ? 'income' : 'expense';
+                        
+                        const matchedRuleCategory = getCategoryForDescription(item.description);
+                        let category, confidence, needsReview, source;
+                        
+                        if (matchedRuleCategory) {
+                            category = matchedRuleCategory;
+                            confidence = 1.0;
+                            needsReview = false;
+                            source = 'user_rule';
+                        } else {
+                            const result = await categorizeTransaction(item.description, item.amount, txnType);
+                            category = result.category;
+                            confidence = result.confidence;
+                            needsReview = result.needsReview;
+                            source = result.source;
+                        }
+                        
+                        return {
+                            id: generateTransactionId(),
+                            date: formattedDate,
+                            description: item.description,
+                            merchant: item.description,
+                            amount: item.amount,
+                            category: category,
+                            type: txnType,
+                            confidence: confidence,
+                            needsReview: needsReview,
+                            reviewed: !needsReview,
+                            source: source
+                        };
+                    }));
+                    
+                    incomingRows.push(...batchResults.filter(Boolean));
+                }
+                
+                processImportedTransactions(incomingRows);
+                
+                if (uploadBtn) {
+                    uploadBtn.innerText = originalText;
+                    uploadBtn.disabled = false;
+                }
+                fileInput.value = '';
+            };
+            
+            reader.onerror = function() {
+                showToast('Error reading CSV file. Please try again.', 'error');
+                if (uploadBtn) {
+                    uploadBtn.innerText = originalText;
+                    uploadBtn.disabled = false;
+                }
+            };
+            
+            reader.readAsText(file);
         }
-        
-        // Pass collected rows into our robust batch processor
-        processImportedTransactions(incomingRows);
-        
+    } catch (err) {
+        console.error('File Upload Error:', err);
+        showToast('Error processing statement file. Check format and try again.', 'error');
         if (uploadBtn) {
             uploadBtn.innerText = originalText;
             uploadBtn.disabled = false;
         }
-        fileInput.value = '';
-    };
-    
-    reader.onerror = function() {
-        showToast('Error reading file. Please try again.', 'error');
-        if (uploadBtn) {
-            uploadBtn.innerText = originalText;
-            uploadBtn.disabled = false;
-        }
-    };
-    
-    reader.readAsText(file);
+    }
 }
 
-// ============================================
+function uploadCSV() {
+    uploadStatement();
+}
+
+
 // TOAST NOTIFICATION
-// ============================================
+
 function showToast(message, type) {
     let toast = document.getElementById('toast');
     if (!toast) {
@@ -583,9 +646,9 @@ function showToast(message, type) {
     setTimeout(() => { toast.style.display = 'none'; }, 4000);
 }
 
-// ============================================
+
 // REVIEW BANNER
-// ============================================
+
 function showReviewBanner(count) {
     let banner = document.getElementById('reviewBanner');
     if (!banner) {
@@ -627,9 +690,9 @@ function hideReviewBanner() {
     if (banner) banner.style.display = 'none';
 }
 
-// ============================================
+
 // SHOW PENDING REVIEWS MODAL
-// ============================================
+
 function showPendingReviews() {
     const pendingTransactions = transactions.filter(t => t.needsReview && !t.reviewed);
     
@@ -668,7 +731,7 @@ function showPendingReviews() {
                         
                         ${t.isPotentialDuplicate ? `
                             <div style="display:inline-block; background: rgba(211, 47, 47, 0.85); color: white; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-bottom: 8px;">
-                                 Potential Duplicate
+                                Potential Duplicate
                             </div>
                         ` : ''}
 
@@ -703,8 +766,8 @@ function showPendingReviews() {
     modal.style.display = 'flex';
 }
 
+// User Approval (No auto-rule creation from transactions)
 function approveTransaction(id) {
-    // String matching handles both numeric IDs and generated string UUIDs
     const transaction = transactions.find(t => String(t.id) === String(id));
     if (transaction) {
         const catSelect = document.getElementById(`cat-${id}`);
@@ -732,11 +795,9 @@ function approveTransaction(id) {
 }
 
 function skipReviewTransaction(id) {
-    // Remove the transaction from the array
     transactions = transactions.filter(t => String(t.id) !== String(id));
     saveAndSyncAppData();
     
-    // Remove its element from the modal UI
     const element = document.getElementById(`review-${id}`);
     if (element) element.remove();
     
@@ -752,6 +813,7 @@ function skipReviewTransaction(id) {
 
 function approveAllPending() {
     const pending = transactions.filter(t => t.needsReview && !t.reviewed);
+
     pending.forEach(t => {
         t.needsReview = false;
         t.reviewed = true;
@@ -770,25 +832,26 @@ function closeReviewModal() {
     if (modal) modal.style.display = 'none';
 }
 
-// ============================================
-// EDIT TRANSACTION
-// ============================================
+
+// EDIT TRANSACTION CATEGORY
+
 function updateTransactionCategory(id, newCategory) {
-    const transaction = transactions.find(t => t.id === id);
+    const transaction = transactions.find(t => String(t.id) === String(id));
     if (transaction) {
         transaction.category = newCategory;
         transaction.needsReview = false;
         transaction.reviewed = true;
         transaction.source = 'user_corrected';
+        
         saveData();
         updateAll();
         showToast('Category updated', 'success');
     }
 }
 
-// ============================================
+
 // CLEAR DATA
-// ============================================
+
 function clearAllData() {
     if (confirm('Delete ALL transactions? This cannot be undone.')) {
         transactions = [];
@@ -799,9 +862,9 @@ function clearAllData() {
     }
 }
 
-// ============================================
+
 // FILTER PENDING
-// ============================================
+
 let showOnlyPending = false;
 
 function toggleShowPending() {
@@ -815,11 +878,9 @@ function toggleShowPending() {
     }
 }
 
-// ============================================
-// UPDATE UI
-// ============================================
+
 function updateAll() {
-    updateDashboardSummary(); // Runs the updated robust calculation
+    updateDashboardSummary();
     updateTransactionList();
     updateChart();
     updateBudgetDisplay();
@@ -834,7 +895,6 @@ function updateAll() {
     }
 }
 
-// Retained as an alias in case other parts of your code call updateSummary()
 function updateSummary() {
     updateDashboardSummary();
 }
@@ -843,13 +903,11 @@ function updateDashboardSummary() {
     let totalIncome = 0;
     let totalExpenses = 0;
 
-    // Retrieve transactions safely from global scope or window object
     const list = (typeof transactions !== 'undefined' && Array.isArray(transactions)) 
         ? transactions 
         : (window.transactions || []);
 
     list.forEach(t => {
-        // 1. Sanitize amount (handle string inputs, currency symbols, comma decimals)
         let amt = 0;
         if (typeof t.amount === 'number') {
             amt = t.amount;
@@ -857,13 +915,11 @@ function updateDashboardSummary() {
             amt = parseFloat(t.amount.replace(/[^0-9.-]/g, '')) || 0;
         }
 
-        // 2. Determine Income vs Expense
         if (t.type === 'income' || t.type === 'Income') {
             totalIncome += Math.abs(amt);
         } else if (t.type === 'expense' || t.type === 'Expense') {
             totalExpenses += Math.abs(amt);
         } else {
-            // Fallback for objects without an explicit t.type property
             if (t.category && t.category !== 'Income' && amt > 0) {
                 totalExpenses += Math.abs(amt);
             } else if (amt > 0) {
@@ -876,7 +932,6 @@ function updateDashboardSummary() {
 
     const remaining = totalIncome - totalExpenses;
 
-    // 3. Target your exact HTML IDs from index.html
     const incomeEl = document.getElementById('incomeAmount');
     const expensesEl = document.getElementById('expenseAmount');
     const remainingEl = document.getElementById('remainingAmount');
@@ -900,7 +955,6 @@ function updateChart() {
         if (typeof t.amount === 'number') amt = t.amount;
         else if (typeof t.amount === 'string') amt = parseFloat(t.amount.replace(/[^0-9.-]/g, '')) || 0;
 
-        // Count as spending if negative OR if categorized as an expense
         if (amt < 0 || (t.category && t.category !== 'Income')) {
             const cat = t.category || 'Uncategorised';
             const value = Math.abs(amt);
@@ -1015,9 +1069,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// ============================================
-// FILTER BUTTON
-// ============================================
+
 function addFilterButton() {
     const filterContainer = document.querySelector('.flex-between');
     if (filterContainer && !document.getElementById('filterPendingBtn')) {
@@ -1030,12 +1082,9 @@ function addFilterButton() {
     }
 }
 
-// ============================================
-// SAMPLE DATA
-// ============================================
+
 function loadSampleData() {
     if (localStorage.getItem(SAMPLE_DATA_KEY) === 'true') {
-        console.log('Sample data already loaded, skipping.');
         return;
     }
     
@@ -1045,14 +1094,12 @@ function loadSampleData() {
             const parsed = JSON.parse(saved);
             if (parsed && parsed.length > 0) {
                 localStorage.setItem(SAMPLE_DATA_KEY, 'true');
-                console.log('User data exists, skipping sample data.');
                 return;
             }
         } catch(e) {}
     }
     
     if (transactions.length === 0) {
-        console.log('Loading sample data...');
         transactions = [
             { id: 1, date: '2026-05-10', description: 'Salary Deposit', amount: 18500, category: 'Income', confidence: 0.95, needsReview: false, reviewed: true, source: 'sample' },
             { id: 2, date: '2026-05-09', description: 'Checkers Groceries', amount: -845.50, category: 'Essential', confidence: 0.9, needsReview: false, reviewed: true, source: 'sample' },
@@ -1061,13 +1108,10 @@ function loadSampleData() {
         ];
         saveData();
         localStorage.setItem(SAMPLE_DATA_KEY, 'true');
-        console.log('Sample data loaded successfully.');
     }
 }
 
-// ============================================
-// MULTIPLE GOALS
-// ============================================
+
 function saveGoal() {
     const goalTypeEl = document.getElementById('goalType');
     const goalAmountEl = document.getElementById('goalAmount');
@@ -1143,9 +1187,8 @@ function clearAllGoals() {
     }
 }
 
-// ============================================
-// DEBT FUNCTIONS
-// ============================================
+
+
 function addDebt() {
     const nameEl = document.getElementById('debtName');
     const balanceEl = document.getElementById('debtBalance');
@@ -1207,77 +1250,8 @@ function displayDebts() {
         </div>
     </div>
 `).join('');
-
 }
 
-// ============================================
-// DEBT PAYOFF TIMELINE ESTIMATOR (AVALANCHE METHOD)
-// ============================================
-function calculatePayoffTimeline(monthlyBudget) {
-    let debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
-    if (debts.length === 0 || !monthlyBudget || monthlyBudget <= 0) {
-        return { months: 0, totalInterest: 0, error: 'Add debts and a valid monthly budget.' };
-    }
-
-    // Deep copy debts so we don't mutate real state during simulation
-    let simDebts = debts.map(d => ({
-        name: d.name,
-        balance: parseFloat(d.balance),
-        rate: parseFloat(d.rate) || 0
-    }));
-
-    let months = 0;
-    let totalInterestPaid = 0;
-    let maxSafetyCounter = 600; // Cap at 50 years to prevent infinite loops
-
-    while (simDebts.some(d => d.balance > 0.01) && months < maxSafetyCounter) {
-        months++;
-        let availableFunds = parseFloat(monthlyBudget);
-
-        // 1. Sort debts by interest rate descending (Avalanche priority)
-        simDebts.sort((a, b) => b.rate - a.rate);
-
-        // 2. Apply monthly interest and collect required minimums (estimated at 3% or R50 minimum)
-        let totalMinRequired = 0;
-        simDebts.forEach(d => {
-            if (d.balance > 0) {
-                let monthlyInterest = (d.balance * (d.rate / 100)) / 12;
-                totalInterestPaid += monthlyInterest;
-                d.balance += monthlyInterest;
-
-                let minPay = Math.max(50, d.balance * 0.03);
-                if (minPay > d.balance) minPay = d.balance;
-                
-                d.balance -= minPay;
-                availableFunds -= minPay;
-            }
-        });
-
-        // If the monthly budget is too low to even cover minimums
-        if (availableFunds < 0 && months === 1) {
-            return { error: 'Monthly budget is too low to cover minimum payments!' };
-        }
-
-        // 3. Apply any remaining budget surplus directly to the highest-priority active debt
-        let targetDebt = simDebts.find(d => d.balance > 0.01);
-        if (targetDebt && availableFunds > 0) {
-            targetDebt.balance -= availableFunds;
-        }
-
-        // Clean up fully paid debts
-        simDebts = simDebts.filter(d => d.balance > 0.01);
-    }
-
-    return {
-        months: months,
-        years: (months / 12).toFixed(1),
-        totalInterest: totalInterestPaid
-    };
-}
-
-// ============================================
-// UPDATED DEBT SUMMARY & SIMULATOR INTEGRATION
-// ============================================
 function updateDebtSummary() {
     let debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
     let totalDebt = debts.reduce((sum, d) => sum + d.balance, 0);
@@ -1289,18 +1263,14 @@ function updateDebtSummary() {
     if (totalEl) totalEl.innerHTML = `R${totalDebt.toFixed(2)}`;
     if (rateEl) rateEl.innerHTML = `${highestRate.toFixed(1)}%`;
     
-    // Grab current monthly budget value from simulator input
     const budgetInput = document.getElementById('monthlyDebtBudget');
     const monthlyBudget = budgetInput ? parseFloat(budgetInput.value) || 0 : 0;
 
-    // Trigger live AI coach response
     fetchAICoachAdvice(debts, monthlyBudget);
 
-    // Bind simulator listener if not already bound
     if (budgetInput && !budgetInput.dataset.simulatorBound) {
         budgetInput.addEventListener('input', () => {
             renderDebtPayoffSimulator();
-            // Debounce or update AI coach on budget change as well
             fetchAICoachAdvice(debts, parseFloat(budgetInput.value) || 0);
         });
         budgetInput.dataset.simulatorBound = 'true';
@@ -1318,7 +1288,6 @@ function clearDebts() {
     }
 }
 
-// Add this function to your debt section
 function deleteDebt(id) {
     let debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
     debts = debts.filter(d => d.id !== id);
@@ -1328,16 +1297,15 @@ function deleteDebt(id) {
     showToast('Debt settled and removed!');
 }
 
-// ============================================
+
 // ADVANCED DEBT PAYOFF SIMULATOR (Avalanche vs. Snowball)
-// ============================================
+
 function calculateTimelineForMethod(monthlyBudget, method = 'avalanche') {
     let debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
     if (debts.length === 0 || !monthlyBudget || monthlyBudget <= 0) {
         return { months: 0, totalInterest: 0, error: 'Add debts and a valid monthly budget.' };
     }
 
-    // Deep copy debts so we don't mutate state during simulation
     let simDebts = debts.map(d => ({
         name: d.name,
         balance: parseFloat(d.balance),
@@ -1346,20 +1314,18 @@ function calculateTimelineForMethod(monthlyBudget, method = 'avalanche') {
 
     let months = 0;
     let totalInterestPaid = 0;
-    let maxSafetyCounter = 600; // 50-year cap to prevent infinite loops
+    let maxSafetyCounter = 600;
 
     while (simDebts.some(d => d.balance > 0.01) && months < maxSafetyCounter) {
         months++;
         let availableFunds = parseFloat(monthlyBudget);
 
-        // Sort based on chosen strategy
         if (method === 'avalanche') {
-            simDebts.sort((a, b) => b.rate - a.rate); // Highest interest rate first
+            simDebts.sort((a, b) => b.rate - a.rate);
         } else {
-            simDebts.sort((a, b) => a.balance - b.balance); // Lowest balance first
+            simDebts.sort((a, b) => a.balance - b.balance);
         }
 
-        // Apply minimum payments and calculate interest
         simDebts.forEach(d => {
             if (d.balance > 0) {
                 let monthlyInterest = (d.balance * (d.rate / 100)) / 12;
@@ -1378,7 +1344,6 @@ function calculateTimelineForMethod(monthlyBudget, method = 'avalanche') {
             return { error: 'Monthly budget is too low to cover minimum payments!' };
         }
 
-        // Apply remaining budget surplus directly to top priority debt
         let targetDebt = simDebts.find(d => d.balance > 0.01);
         if (targetDebt && availableFunds > 0) {
             targetDebt.balance -= availableFunds;
@@ -1553,9 +1518,9 @@ function updateBudgetDisplay() {
     } catch(e) {}
 }
 
-// ============================================
+
 // PROFILE FUNCTIONS
-// ============================================
+
 function saveProfile() {
     const name = document.getElementById('profileName')?.value.trim();
     const income = document.getElementById('monthlyIncome')?.value;
@@ -1631,9 +1596,9 @@ function displayProfile() {
     }
 }
 
-// ============================================
+
 // CUSTOM CATEGORIES
-// ============================================
+
 function addCustomCategory() {
     const nameEl = document.getElementById('newCategoryName');
     const colorEl = document.getElementById('categoryColor');
@@ -1649,7 +1614,7 @@ function addCustomCategory() {
     
     let categories = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
     
-    if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+    if (categories.some(c => (c.name || c).toLowerCase() === name.toLowerCase())) {
         alert('Category already exists');
         return;
     }
@@ -1665,7 +1630,6 @@ function addCustomCategory() {
     displayCustomCategories();
     updateAll();
     
-    // --> ADD THIS LINE SO THE RULES DROPDOWN UPDATES INSTANTLY <--
     if (typeof populateRuleCategories === 'function') populateRuleCategories();
     
     showToast(`Category "${name}" added!`);
@@ -1674,12 +1638,11 @@ function addCustomCategory() {
 
 function removeCustomCategory(index) {
     let categories = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
-    const removed = categories[index].name;
+    const removed = categories[index].name || categories[index];
     categories.splice(index, 1);
     localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(categories));
     displayCustomCategories();
     updateAll();
-    
     
     if (typeof populateRuleCategories === 'function') populateRuleCategories();
     
@@ -1697,35 +1660,40 @@ function displayCustomCategories() {
         return;
     }
     
-    container.innerHTML = categories.map((cat, index) => `
-        <div style="background: rgba(255,255,255,0.12); padding: 12px 16px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid ${cat.color};">
-            <span><i class="fas fa-circle" style="color:${cat.color}; margin-right:8px;"></i> ${escapeHtml(cat.name)}</span>
+    container.innerHTML = categories.map((cat, index) => {
+        const catName = typeof cat === 'object' ? cat.name : cat;
+        const catColor = typeof cat === 'object' && cat.color ? cat.color : '#6058a3';
+        return `
+        <div style="background: rgba(255,255,255,0.12); padding: 12px 16px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid ${catColor};">
+            <span><i class="fas fa-circle" style="color:${catColor}; margin-right:8px;"></i> ${escapeHtml(catName)}</span>
             <div>
-                <button onclick="editCustomCategory('${cat.name}')" class="btn-secondary" style="padding: 4px 8px; font-size: 11px; margin-right: 5px;">
+                <button onclick="editCustomCategory('${catName}')" class="btn-secondary" style="padding: 4px 8px; font-size: 11px; margin-right: 5px;">
                     <i class="fas fa-edit"></i> Edit
                 </button>
                 <button onclick="removeCustomCategory(${index})" class="btn-small" style="background: rgba(200,170,170,0.4);">Remove</button>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
+
 function editCustomCategory(oldName) {
     const newName = prompt("Enter the new category name:", oldName);
     if (!newName || newName.trim() === "" || newName.trim() === oldName) return;
 
     const trimmedNewName = newName.trim();
 
-    // 1. Update custom categories in localStorage
     let customCats = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
     customCats = customCats.map(cat => {
         if (typeof cat === 'object' && cat.name === oldName) {
             cat.name = trimmedNewName;
+        } else if (typeof cat === 'string' && cat === oldName) {
+            return { name: trimmedNewName, color: '#6058a3' };
         }
         return cat;
     });
     localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(customCats));
 
-    // 2. FIXED: Use 'trackmyfin_data' instead of 'transactions'
     let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
     txs.forEach(t => {
         if (t.category === oldName) {
@@ -1733,6 +1701,7 @@ function editCustomCategory(oldName) {
         }
     });
     localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
+    transactions = txs;
 
     if (typeof showToast === 'function') {
         showToast('Category updated successfully');
@@ -1744,7 +1713,6 @@ function editCustomCategory(oldName) {
 }
 
 function applyRulesToExisting() {
-    // FIXED: Use 'trackmyfin_data' instead of 'transactions'
     let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
     let updatedCount = 0;
     
@@ -1757,7 +1725,7 @@ function applyRulesToExisting() {
     });
     
     localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
-    transactions = txs; // update global array
+    transactions = txs;
     
     if (typeof showToast === 'function') {
         showToast(`Applied rules to ${updatedCount} transactions`);
@@ -1767,18 +1735,6 @@ function applyRulesToExisting() {
     }
 }
 
-
-
-// function removeCustomCategory(index) {
-//     let categories = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
-//     const removed = categories[index].name;
-//     categories.splice(index, 1);
-//     localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(categories));
-//     displayCustomCategories();
-//     updateAll();
-//     showToast(`Category "${removed}" removed`);
-// }
-
 function exportAllData() {
     const data = {
         transactions: JSON.parse(localStorage.getItem('trackmyfin_data') || '[]'),
@@ -1786,7 +1742,8 @@ function exportAllData() {
         goals: JSON.parse(localStorage.getItem('trackmyfin_goals') || '[]'),
         profile: JSON.parse(localStorage.getItem('trackmyfin_profile') || 'null'),
         budgets: JSON.parse(localStorage.getItem('trackmyfin_budgets') || 'null'),
-        customCategories: JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]')
+        customCategories: JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]'),
+        rules: JSON.parse(localStorage.getItem('trackmyfin_rules') || '[]')
     };
     
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1799,9 +1756,8 @@ function exportAllData() {
     showToast('Data exported successfully!');
 }
 
-// ============================================
-// AI-POWERED REPORT GENERATION
-// ============================================
+
+// AI-POWERED REPORT GENERATION & PDF EXPORT
 
 async function generateReport() {
     const monthInput = document.getElementById('reportMonth')?.value;
@@ -1811,7 +1767,6 @@ async function generateReport() {
 
     reportContent.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Generating report for ${monthInput}...</div>`;
 
-    // FIXED: Use the correct LocalStorage keys ('trackmyfin_data' and 'trackmyfin_profile')
     const savedTransactions = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
     const profile = JSON.parse(localStorage.getItem('trackmyfin_profile') || '{}');
     
@@ -1828,7 +1783,11 @@ async function generateReport() {
         } else {
             expenses += amt;
             const cat = t.category || 'Lifestyle';
-            if (catTotals[cat] !== undefined) catTotals[cat] += amt;
+            if (catTotals[cat] !== undefined) {
+                catTotals[cat] += amt;
+            } else {
+                catTotals[cat] = amt;
+            }
         }
     });
 
@@ -1839,7 +1798,6 @@ async function generateReport() {
         .slice(0, 3);
 
     try {
-        // FIXED: Use REPORT_URL instead of hardcoding '/api/report'
         const response = await fetch(REPORT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1865,13 +1823,17 @@ async function generateReport() {
             <div style="margin-bottom: 12px;">
                 <span class="transaction-category" ${badgeClass}>${badgeText}</span>
             </div>
-            <div style="line-height: 1.6; white-space: pre-line; color: #2c2c2a;">
-                ${data.summary}
+            <div id="reportSummaryText" style="line-height: 1.6; white-space: pre-line; color: #2c2c2a;">
+                ${escapeHtml(data.summary)}
             </div>
         `;
         
         localStorage.setItem('lastGeneratedReport', JSON.stringify({
             month: monthInput,
+            income: income.toFixed(2),
+            expenses: expenses.toFixed(2),
+            remaining: remaining.toFixed(2),
+            summary: data.summary,
             html: reportContent.innerHTML
         }));
 
@@ -1881,29 +1843,61 @@ async function generateReport() {
     }
 }
 
-
-// Functional PDF Export replacing placeholder toast
-function exportPDF() {
+// Multi-Paragraph PDF Export Fix using jsPDF
+function exportReportPDF() {
     const reportContent = document.getElementById('reportContent');
-    if (!reportContent || reportContent.innerText.includes('Select a month')) {
-        showToast('Please generate a report first');
+    const summaryTextEl = document.getElementById('reportSummaryText');
+    const monthInput = document.getElementById('reportMonth')?.value || 'summary';
+    
+    if (!reportContent || !summaryTextEl || summaryTextEl.innerText.trim() === '') {
+        showToast('Please generate a valid report first', 'warning');
         return;
     }
-    window.print();
+
+    if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
+        showToast('jsPDF library loading... falling back to print view', 'info');
+        window.print();
+        return;
+    }
+
+    const { jsPDF } = window.jspdf || window;
+    const doc = new jsPDF();
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(96, 88, 163);
+    doc.text(`Track My Fin - Monthly Report (${monthInput})`, 14, 20);
+
+    const savedReport = JSON.parse(localStorage.getItem('lastGeneratedReport') || '{}');
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Income: R${savedReport.income || '0.00'} | Expenses: R${savedReport.expenses || '0.00'} | Balance: R${savedReport.remaining || '0.00'}`, 14, 30);
+
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, 35, 196, 35);
+
+    doc.setFontSize(10);
+    doc.setTextColor(40, 40, 40);
+    const fullText = summaryTextEl.innerText;
+    const splitSummary = doc.splitTextToSize(fullText, 180);
+    
+    doc.text(splitSummary, 14, 44);
+
+    doc.save(`TrackMyFin_Report_${monthInput}.pdf`);
+    showToast('PDF downloaded successfully!', 'success');
 }
 
-// Security sanitization helper
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+function exportPDF() {
+    exportReportPDF();
+}
+function exportReportToPDF() {
+    exportReportPDF();
 }
 
 window.generateReport = generateReport;
+
 function exportCSV() {
     const monthEl = document.getElementById('reportMonth');
     if (!monthEl) return;
@@ -1927,7 +1921,7 @@ function exportCSV() {
     
     let csv = 'Date,Description,Amount,Category\n';
     filtered.forEach(t => {
-        csv += `${t.date},${t.description},${t.amount},${t.category}\n`;
+        csv += `${t.date},"${t.description}",${t.amount},${t.category}\n`;
     });
     
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -1940,9 +1934,9 @@ function exportCSV() {
     showToast('CSV exported!');
 }
 
-// ============================================
+
 // SAVINGS GOAL
-// ============================================
+
 function saveSavingsGoal() {
     const nameEl = document.getElementById('savingsGoalName');
     const targetEl = document.getElementById('savingsTarget');
@@ -2026,9 +2020,9 @@ function clearSavingsGoal() {
     }
 }
 
-// ============================================
-// INIT
-// ============================================
+
+// INIT & TABS
+
 function init() {
     loadData();
     loadSampleData();
@@ -2063,6 +2057,9 @@ function init() {
     if (document.getElementById('ruleCategorySelect')) {
         populateRuleCategories();
     }
+    if (document.getElementById('customRulesContainer')) {
+        renderCustomRules();
+    }
     
     console.log('Track My Fin ready.');
     if (!USE_REAL_API) {
@@ -2075,7 +2072,7 @@ function init() {
 init();
 
 function getCustomCategories() {
-    return JSON.parse(localStorage.getItem('customCategories') || '[]');
+    return JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
 }
 
 function calculateCategoryTotals(transactions) {
@@ -2086,12 +2083,14 @@ function calculateCategoryTotals(transactions) {
         Income: 0
     };
 
-    // Pull in user-created custom categories from settings
     const customCats = getCustomCategories();
-    customCats.forEach(c => { totals[c.name] = 0; });
+    customCats.forEach(c => { 
+        const name = typeof c === 'object' ? c.name : c;
+        totals[name] = 0; 
+    });
 
     transactions.forEach(t => {
-        if (t.type === 'expense') {
+        if (t.type === 'expense' || t.amount < 0) {
             const cat = t.category || 'Lifestyle';
             totals[cat] = (totals[cat] || 0) + Math.abs(t.amount);
         }
@@ -2106,26 +2105,23 @@ function switchTab(tabName) {
     const target = document.getElementById(tabName);
     if (target) target.style.display = 'block';
 
-    // FIXED: Call generateReport() (singular) instead of generateReports()
     if (tabName === 'reports' && typeof generateReport === 'function') {
         generateReport();
     }
 }
 
-// Populate category dropdown in the rules section
 function populateRuleCategories() {
     const select = document.getElementById('ruleCategorySelect');
     if (!select) return;
     
     const defaultCategories = ['Essential', 'Lifestyle', 'Financial'];
     const customCats = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
-    const customNames = customCats.map(c => c.name || c);
+    const customNames = customCats.map(c => typeof c === 'object' ? c.name : c);
     
     const allCats = [...defaultCategories, ...customNames];
     select.innerHTML = allCats.map(cat => `<option value="${cat}">${cat}</option>`).join('');
 }
 
-// Handle adding a new rule from settings
 function handleAddRule() {
     const keywordInput = document.getElementById('ruleKeywordInput');
     const categorySelect = document.getElementById('ruleCategorySelect');
@@ -2141,7 +2137,12 @@ function handleAddRule() {
     }
     
     let rules = JSON.parse(localStorage.getItem('trackmyfin_rules') || '[]');
-    rules.push({ keyword: keyword.toLowerCase(), category });
+    const existingIndex = rules.findIndex(r => r.keyword === keyword.toLowerCase());
+    if (existingIndex >= 0) {
+        rules[existingIndex].category = category;
+    } else {
+        rules.push({ keyword: keyword.toLowerCase(), category });
+    }
     localStorage.setItem('trackmyfin_rules', JSON.stringify(rules));
     
     keywordInput.value = '';
@@ -2149,7 +2150,6 @@ function handleAddRule() {
     if (typeof showToast === 'function') showToast('Rule added successfully');
 }
 
-// Render the list of rules in settings.html
 function renderCustomRules() {
     const container = document.getElementById('customRulesContainer');
     if (!container) return;
@@ -2163,13 +2163,12 @@ function renderCustomRules() {
     
     container.innerHTML = rules.map((rule, index) => `
         <div style="background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
-            <span>If description contains <strong>"${rule.keyword}"</strong> &rarr; <span style="font-weight:600; color:#6058a3;">${rule.category}</span></span>
+            <span>If description contains <strong>"${escapeHtml(rule.keyword)}"</strong> &rarr; <span style="font-weight:600; color:#6058a3;">${escapeHtml(rule.category)}</span></span>
             <button onclick="deleteRule(${index})" class="btn-small btn-danger" style="padding: 2px 6px; font-size: 11px;"><i class="fas fa-trash"></i></button>
         </div>
     `).join('');
 }
 
-// Delete an individual rule
 function deleteRule(index) {
     let rules = JSON.parse(localStorage.getItem('trackmyfin_rules') || '[]');
     rules.splice(index, 1);
@@ -2178,7 +2177,6 @@ function deleteRule(index) {
     if (typeof showToast === 'function') showToast('Rule deleted');
 }
 
-// Helper: Check description against all rules and return matching category
 function getCategoryForDescription(description) {
     if (!description) return null;
     const lowerDesc = description.toLowerCase();
@@ -2192,106 +2190,9 @@ function getCategoryForDescription(description) {
     return null;
 }
 
-// Apply rules to all existing transactions
-// function editCustomCategory(oldName) {
-//     const newName = prompt("Enter the new category name:", oldName);
-//     if (!newName || newName.trim() === "" || newName.trim() === oldName) return;
 
-//     const trimmedNewName = newName.trim();
-
-//     // 1. Update custom categories in localStorage
-//     let customCats = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
-//     customCats = customCats.map(cat => {
-//         if (typeof cat === 'object' && cat.name === oldName) {
-//             cat.name = trimmedNewName;
-//         }
-//         return cat;
-//     });
-//     localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(customCats));
-
-//     // 2. FIXED: Use 'trackmyfin_data' instead of 'transactions'
-//     let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
-//     txs.forEach(t => {
-//         if (t.category === oldName) {
-//             t.category = trimmedNewName;
-//         }
-//     });
-//     localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
-
-//     if (typeof showToast === 'function') {
-//         showToast('Category updated successfully');
-//     }
-    
-//     displayCustomCategories();
-//     if (typeof populateRuleCategories === 'function') populateRuleCategories();
-//     updateAll();
-// }
-
-// function applyRulesToExisting() {
-//     // FIXED: Use 'trackmyfin_data' instead of 'transactions'
-//     let txs = JSON.parse(localStorage.getItem('trackmyfin_data') || '[]');
-//     let updatedCount = 0;
-    
-//     txs.forEach(t => {
-//         const matchedCategory = getCategoryForDescription(t.description);
-//         if (matchedCategory) {
-//             t.category = matchedCategory;
-//             updatedCount++;
-//         }
-//     });
-    
-//     localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
-//     transactions = txs; // update global array
-    
-//     if (typeof showToast === 'function') {
-//         showToast(`Applied rules to ${updatedCount} transactions`);
-//     }
-//     if (typeof updateAll === 'function') {
-//         updateAll();
-//     }
-// }
-
-function exportReportToPDF() {
-    const element = document.getElementById('reportContent');
-    const monthInput = document.getElementById('reportMonth')?.value || 'summary';
-    
-    // Validation check to ensure there's a valid report to export
-    if (!element || element.innerText.includes('Generating') || element.innerText.includes('Failed') || element.innerText.trim() === '') {
-        if (typeof showToast === 'function') {
-            showToast('Please generate a valid report first before exporting.');
-        } else {
-            alert('Please generate a valid report first before exporting.');
-        }
-        return;
-    }
-
-    // Configuration options for html2pdf
-    const options = {
-        margin:       10, // mm
-        filename:     `TrackMyFin_Report_${monthInput}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    // Trigger download
-    html2pdf().from(element).set(options).save().then(() => {
-        if (typeof showToast === 'function') {
-            showToast('PDF exported successfully!');
-        }
-    }).catch(err => {
-        console.error('PDF Export Error:', err);
-        if (typeof showToast === 'function') {
-            showToast('Failed to generate PDF.');
-        } else {
-            alert('Failed to generate PDF.');
-        }
-    });
-}
-
-// ============================================
 // LIVE AI COACH (FIN) INTEGRATION
-// ============================================
+
 async function fetchAICoachAdvice(debts, monthlyBudget) {
     const aiEl = document.getElementById('aiRecommendation');
     if (!aiEl) return;
@@ -2304,16 +2205,12 @@ async function fetchAICoachAdvice(debts, monthlyBudget) {
     aiEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Fin is analyzing your strategy...`;
 
    try {
-    // Define your payload object here
     const payloadData = {
         promptType: 'debt_coach',
         debts: debts,
         monthlyBudget: monthlyBudget || 0,
         userGoal: 'Provide encouraging, friendly AI coaching to pay off debt'
     };
-
-    // Add your log right before the fetch() call:
-    console.log("Data I am sending to Fin:", JSON.stringify(payloadData));
 
     const response = await fetch(REPORT_URL, {
         method: 'POST',
@@ -2325,7 +2222,6 @@ async function fetchAICoachAdvice(debts, monthlyBudget) {
 
     const data = await response.json();
     
-    // Render the AI-generated response from your backend
     if (data && (data.summary || data.response)) {
         aiEl.innerHTML = escapeHtml(data.summary || data.response);
     } else {
@@ -2333,7 +2229,6 @@ async function fetchAICoachAdvice(debts, monthlyBudget) {
     }
 } catch (error) {
     console.error('AI Coach Connection Error:', error);
-    // Fallback to intelligent dynamic phrasing if offline
     renderSmartCoachFallback(debts, monthlyBudget, aiEl);
 }
 }
@@ -2343,7 +2238,6 @@ function renderSmartCoachFallback(debts, monthlyBudget, aiEl) {
     aiEl.innerHTML = `Let's crush this together! Focus your extra cash on <strong>${escapeHtml(highest.name)}</strong> (${highest.rate}% interest) first. With R${monthlyBudget} budgeted monthly, you're well on your way!`;
 }
 
-// Force reset function (run in console if needed)
 function forceResetEverything() {
     localStorage.clear();
     transactions = [];

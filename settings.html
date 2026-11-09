@@ -12,96 +12,94 @@
 <body>
     <div class="container">
 
-        <nav class="top-nav">
-            <a href="index.html"><i class="fas fa-chart-pie"></i> Dashboard</a>
-            <a href="budget.html"><i class="fas fa-wallet"></i> Budget</a>
-            <a href="debt.html"><i class="fas fa-credit-card"></i> Debt</a>
-            <a href="reports.html"><i class="fas fa-file-alt"></i> Reports</a>
-            <a href="settings.html" class="active"><i class="fas fa-cog"></i> Settings</a>
+        <nav class="top-nav" aria-label="Main Navigation">
+            <a href="index.html"><i class="fas fa-chart-pie" aria-hidden="true"></i> Dashboard</a>
+            <a href="budget.html"><i class="fas fa-wallet" aria-hidden="true"></i> Budget</a>
+            <a href="debt.html"><i class="fas fa-credit-card" aria-hidden="true"></i> Debt</a>
+            <a href="reports.html"><i class="fas fa-file-alt" aria-hidden="true"></i> Reports</a>
+            <a href="settings.html" class="active" aria-current="page"><i class="fas fa-cog" aria-hidden="true"></i> Settings</a>
         </nav>
 
-        <h1><i class="fas fa-cog"></i> Settings</h1>
+        <h1><i class="fas fa-cog" aria-hidden="true"></i> Settings</h1>
         <p class="subtitle">Manage your preferences and data</p>
 
-        <!-- Profile -->
+      
         <div class="section">
-            <h3><i class="fas fa-user"></i> Profile</h3>
+            <h3><i class="fas fa-user" aria-hidden="true"></i> Profile</h3>
             <div class="form-row">
-                <input type="text" id="profileName" placeholder="Your name" style="flex:1;">
-                <input type="number" id="monthlyIncome" placeholder="Monthly Income (R)" style="flex:1;">
+                <input type="text" id="profileName" placeholder="Your name" aria-label="Your name" style="flex:1;">
+                <input type="number" id="monthlyIncome" placeholder="Monthly Income (R)" aria-label="Monthly Income" style="flex:1;">
             </div>
             <div class="form-row" style="margin-top:10px;">
-                <input type="text" id="userOccupation" placeholder="Occupation (e.g., Student, Developer)" style="flex:1;">
-                <input type="text" id="userGoal" placeholder="Financial goal (e.g., Save for a car)" style="flex:1;">
+                <input type="text" id="userOccupation" placeholder="Occupation (e.g., Student, Developer)" aria-label="Occupation" style="flex:1;">
+                <input type="text" id="userGoal" placeholder="Financial goal (e.g., Save for a car)" aria-label="Financial goal" style="flex:1;">
             </div>
-            <button onclick="saveProfile()" style="margin-top:10px;"><i class="fas fa-save"></i> Save Profile</button>
-            <div id="profileStatus" style="margin-top:10px;"></div>
+            <button onclick="saveProfile()" style="margin-top:10px;"><i class="fas fa-save" aria-hidden="true"></i> Save Profile</button>
+            <div id="profileStatus" style="margin-top:10px;" role="status"></div>
         </div>
 
-        <!-- Profile Display -->
+       
         <div class="section">
-            <h3><i class="fas fa-id-card"></i> Your Profile</h3>
+            <h3><i class="fas fa-id-card" aria-hidden="true"></i> Your Profile</h3>
             <div id="profileDisplay" style="margin-top:10px;">
-                <p style="color:#888;"><i class="fas fa-info-circle"></i> No profile set yet. Fill in the form above.</p>
+                <p style="color:#888;"><i class="fas fa-info-circle" aria-hidden="true"></i> No profile set yet. Fill in the form above.</p>
             </div>
         </div>
 
-        <!-- Custom Categories -->
+       
         <div class="section">
-            <h3><i class="fas fa-tags"></i> Custom Categories</h3>
+            <h3><i class="fas fa-tags" aria-hidden="true"></i> Custom Categories</h3>
             <div class="form-row">
-                <input type="text" id="newCategoryName" placeholder="Category name (e.g., Transport, Education)" style="flex:1;">
-                <select id="categoryColor" style="flex:0.5;">
+                <input type="text" id="newCategoryName" placeholder="Category name (e.g., Transport, Education)" aria-label="New category name" style="flex:1;">
+                <select id="categoryColor" aria-label="Category color" style="flex:0.5;">
                     <option value="#6058a3">Purple</option>
                     <option value="#b271af">Pink</option>
                     <option value="#7aa2c6">Blue</option>
                     <option value="#6a8a6a">Green</option>
                     <option value="#e6b85c">Gold</option>
                 </select>
-                <button onclick="addCustomCategory()"><i class="fas fa-plus"></i> Add</button>
+                <button onclick="addCustomCategory()"><i class="fas fa-plus" aria-hidden="true"></i> Add</button>
             </div>
             <div id="customCategoryList" style="margin-top:15px;">
-                <p style="color:#888;"><i class="fas fa-info-circle"></i> No custom categories added yet</p>
+                <p style="color:#888;"><i class="fas fa-info-circle" aria-hidden="true"></i> No custom categories added yet</p>
             </div>
         </div>
 
-        <!-- Custom Category Rules -->
+   
         <div class="section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0;"><i class="fas fa-robot"></i> Custom Category Rules</h3>
+                <h3 style="margin: 0;"><i class="fas fa-robot" aria-hidden="true"></i> Custom Category Rules</h3>
                 <button onclick="applyRulesToExisting()" class="btn-secondary" style="font-size: 12px; padding: 6px 12px;">
-                    <i class="fas fa-sync"></i> Apply Rules to Past Transactions
+                    <i class="fas fa-sync" aria-hidden="true"></i> Apply Rules to Past Transactions
                 </button>
             </div>
             
-            <!-- Rule Input Form Row -->
             <div class="form-row" style="margin-bottom: 15px;">
-                <input type="text" id="ruleKeywordInput" placeholder="Keyword (e.g. Woolworths, Uber)" style="flex:1;">
-                <select id="ruleCategorySelect" style="flex:1;">
-                    <!-- Categories dynamically inserted here -->
+                <input type="text" id="ruleKeywordInput" placeholder="Keyword (e.g. Woolworths, Uber)" aria-label="Rule keyword" style="flex:1;">
+                <select id="ruleCategorySelect" aria-label="Rule category selection" style="flex:1;">
                 </select>
-                <button onclick="handleAddRule()"><i class="fas fa-plus"></i> Add Rule</button>
+                <button onclick="handleAddRule()"><i class="fas fa-plus" aria-hidden="true"></i> Add Rule</button>
             </div>
 
             <div id="customRulesContainer"></div>
         </div>
 
-        <!-- Data Management -->
+        
         <div class="section">
-            <h3><i class="fas fa-database"></i> Data Management</h3>
+            <h3><i class="fas fa-database" aria-hidden="true"></i> Data Management</h3>
             <div class="form-row">
-                <button onclick="exportAllData()" class="btn-secondary"><i class="fas fa-download"></i> Export All Data (JSON)</button>
-                <button onclick="clearAllData()" class="btn-danger"><i class="fas fa-trash"></i> Clear All Data</button>
+                <button onclick="exportAllData()" class="btn-secondary"><i class="fas fa-download" aria-hidden="true"></i> Export All Data (JSON)</button>
+                <button onclick="clearAllData()" class="btn-danger"><i class="fas fa-trash" aria-hidden="true"></i> Clear All Data</button>
             </div>
-            <div class="note"><i class="fas fa-info-circle"></i> Clearing data is permanent and cannot be undone.</div>
+            <div class="note"><i class="fas fa-info-circle" aria-hidden="true"></i> Clearing data is permanent and cannot be undone.</div>
         </div>
 
-        <!-- About -->
+        
         <div class="section">
-            <h3><i class="fas fa-info-circle"></i> About</h3>
-            <p style="color:#5a4a5a;">Track My Fin v1.0 - Alpha Release</p>
+            <h3><i class="fas fa-info-circle" aria-hidden="true"></i> About</h3>
+            <p style="color:#5a4a5a;">Track My Fin v2.0 - Beta Final</p>
             <p style="color:#888; font-size:12px;">AI-powered personal finance tracker for South Africans</p>
-            <p style="color:#888; font-size:12px; margin-top:10px;"><i class="fas fa-shield-alt"></i> All data stored locally in your browser.</p>
+            <p style="color:#888; font-size:12px; margin-top:10px;"><i class="fas fa-shield-alt" aria-hidden="true"></i> All data stored locally in your browser.</p>
             <p style="color:#888; font-size:12px;">This tool provides insights only and does not constitute financial advice.</p>
         </div>
 
