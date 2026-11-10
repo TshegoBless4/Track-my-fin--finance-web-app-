@@ -1,5 +1,3 @@
-
-
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 export default async function handler(req, res) {
@@ -102,14 +100,35 @@ Return plain text only without Markdown headers.`;
         }
     }
 
-    const formattedRemaining = Number(remaining).toFixed(2);
-    const absoluteRemaining = Math.abs(Number(remaining)).toFixed(2);
-    const balanceDescription = Number(remaining) >= 0 
+    // SAFE RULE-BASED FALLBACKS (PREVENTS "UNDEFINED" / "RNAN" STRINGS)
+    if (promptType === 'debt_coach') {
+        const debtArray = Array.isArray(debts) ? debts : [];
+        const highestDebt = debtArray.length > 0 
+            ? debtArray.reduce((max, d) => ((d.rate || 0) > (max.rate || 0) ? d : max), debtArray[0])
+            : null;
+
+        const advice = highestDebt 
+            ? `Focus your repayments on ${highestDebt.name} first because it carries your highest interest rate of ${highestDebt.rate}%. Allocating your R${monthlyBudget || 0} budget toward this balance will save you money on interest.`
+            : `Add your debts to build a customized payoff plan.`;
+
+        return res.status(200).json({
+            summary: `Hey! I'm Fin, your financial coach. ${advice}`,
+            source: 'rule-based'
+        });
+    }
+
+    const safeIncome = Number(income || 0).toFixed(2);
+    const safeExpenses = Number(expenses || 0).toFixed(2);
+    const numRemaining = Number(remaining || 0);
+    const formattedRemaining = numRemaining.toFixed(2);
+    const absoluteRemaining = Math.abs(numRemaining).toFixed(2);
+    
+    const balanceDescription = numRemaining >= 0 
         ? `a net positive balance of R${formattedRemaining}` 
         : `a net deficit of R${absoluteRemaining}`;
 
     return res.status(200).json({
-        summary: `During ${month}, you brought in R${Number(income).toFixed(2)} in total income against R${Number(expenses).toFixed(2)} in total expenses, leaving you with ${balanceDescription}.
+        summary: `During ${month || 'this period'}, you brought in R${safeIncome} in total income against R${safeExpenses} in total expenses, leaving you with ${balanceDescription}.
 
 Your primary expense distribution shows R${Number(categories?.Essential || 0).toFixed(2)} spent on Essential needs, R${Number(categories?.Lifestyle || 0).toFixed(2)} on Lifestyle, and R${Number(categories?.Financial || 0).toFixed(2)} toward Financial obligations. Keeping lifestyle costs measured against essential requirements is a great indicator of financial awareness.
 

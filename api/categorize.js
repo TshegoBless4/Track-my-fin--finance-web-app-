@@ -92,5 +92,9 @@ Respond strictly in valid JSON format with no markdown or thought tags:
         }
     }
 
-    return res.status(500).json({ error: 'All AI models failed' });
+   return res.status(200).json({ 
+        category: 'Lifestyle', 
+        confidence: 0.5, 
+        source: 'fallback_due_to_error' 
+    });
 }

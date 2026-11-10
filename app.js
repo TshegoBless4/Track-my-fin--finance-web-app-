@@ -1,6 +1,4 @@
-
-// TRACK MY FIN - COMPLETE APP.JS (BETA FINAL)
-
+// TRACK MY FIN - COMPLETE APP.JS (FINAL DECOUPLED UX)
 
 const isLocal = window.location.hostname === 'localhost' || 
                 window.location.hostname === '127.0.0.1';
@@ -116,7 +114,7 @@ async function categorizeWithAPI(description, amount, type) {
 
 function categorizeWithKeywords(description, type) {
     if (type === 'income') {
-        return { category: 'Income', confidence: 0.9 };
+        return { category: 'Income', confidence: 0.95 };
     }
     
     const desc = description.toLowerCase();
@@ -124,7 +122,7 @@ function categorizeWithKeywords(description, type) {
     if (desc.includes('salary') || desc.includes('deposit') || 
         desc.includes('income') || desc.includes('wage') ||
         desc.includes('payment received') || desc.includes('freelance')) {
-        return { category: 'Income', confidence: 0.9 };
+        return { category: 'Income', confidence: 0.95 };
     }
     
     if (desc.includes('checkers') || desc.includes('pick n pay') || 
@@ -145,12 +143,7 @@ function categorizeWithKeywords(description, type) {
         return { category: 'Financial', confidence: 0.85 };
     }
     
-    if (desc.includes('payment') || desc.includes('transfer') || desc.includes('mall') ||
-        desc.includes('online') || desc.includes('shopping')) {
-        return { category: 'Lifestyle', confidence: 0.35 };
-    }
-    
-    return { category: 'Lifestyle', confidence: 0.55 };
+    return { category: 'Lifestyle', confidence: 0.6 };
 }
 
 
@@ -292,7 +285,7 @@ async function addTransaction(event) {
     }
     
     transactions.unshift({
-        id: Date.now(),
+        id: generateTransactionId(),
         date: new Date().toISOString().split('T')[0],
         description: description,
         amount: amount,
@@ -311,7 +304,7 @@ async function addTransaction(event) {
     }
     
     if (needsReview) {
-        showToast(`Transaction "${description.substring(0, 30)}" needs review (${Math.round(confidence*100)}% confidence)`, 'warning');
+        showToast(`Transaction "${description.substring(0, 30)}" flagged for review`, 'warning');
         showReviewBanner(1);
     } else {
         showToast(`Added: ${description.substring(0, 30)} → ${category}`, 'success');
@@ -322,7 +315,7 @@ async function addTransaction(event) {
 }
 
 
-// DELETE SINGLE TRANSACTION
+// DELETE SINGLE TRANSACTION & STATE SYNC
 
 function generateTransactionId() {
     return 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
@@ -337,7 +330,6 @@ function deleteTransaction(transactionId) {
     }
 }
 
-// Centralized State Sync Pipeline
 function saveAndSyncAppData() {
     try {
         localStorage.setItem('trackmyfin_data', JSON.stringify(transactions));
@@ -393,7 +385,7 @@ function processImportedTransactions(incomingRows) {
     showReviewBanner(pendingCount);
     
     if (potentialDuplicateCount > 0) {
-        showToast(`Imported ${addedCount} transactions (${potentialDuplicateCount} potential duplicates found)`, 'warning');
+        showToast(`Imported ${addedCount} transactions (${potentialDuplicateCount} potential duplicates flagged)`, 'warning');
     } else {
         showToast(`Imported ${addedCount} transactions sent to review queue.`, 'success');
     }
@@ -401,7 +393,6 @@ function processImportedTransactions(incomingRows) {
     showPendingReviews();
 }
 
-// PDF Statement Parsing Helper with Batched AI Categorization
 async function parsePDFStatement(file) {
     if (typeof pdfjsLib === 'undefined') {
         throw new Error('pdf.js library is not loaded. Please include pdf.min.js in your HTML.');
@@ -435,7 +426,6 @@ async function parsePDFStatement(file) {
         }
     }
 
-    // Process in parallel batches for speed while utilizing AI
     const incomingRows = [];
     const batchSize = 5;
     for (let i = 0; i < rawItems.length; i += batchSize) {
@@ -482,7 +472,6 @@ async function parsePDFStatement(file) {
     return incomingRows;
 }
 
-// Universal File Upload Handler with Batched AI Processing for CSV
 async function uploadStatement() {
     const fileInput = document.getElementById('csvFile') || document.getElementById('statementFile');
     if (!fileInput) {
@@ -626,9 +615,7 @@ async function uploadStatement() {
     }
 }
 
-function uploadCSV() {
-    uploadStatement();
-}
+function uploadCSV() { uploadStatement(); }
 
 
 // TOAST NOTIFICATION
@@ -679,7 +666,7 @@ function showReviewBanner(count) {
     }
     
     banner.innerHTML = `
-        <span><i class="fas fa-info-circle"></i> ${count} transaction${count > 1 ? 's' : ''} need review (low confidence)</span>
+        <span><i class="fas fa-info-circle"></i> ${count} transaction${count > 1 ? 's' : ''} flagged for review</span>
         <button onclick="showPendingReviews()" style="background: #6058a3; color: white; padding: 8px 18px; border-radius: 40px; border: none; cursor: pointer;">Review Now</button>
     `;
     banner.style.display = 'flex';
@@ -691,7 +678,7 @@ function hideReviewBanner() {
 }
 
 
-// SHOW PENDING REVIEWS MODAL
+// SHOW PENDING REVIEWS MODAL (WITH DECOUPLED OPTIONS)
 
 function showPendingReviews() {
     const pendingTransactions = transactions.filter(t => t.needsReview && !t.reviewed);
@@ -723,7 +710,7 @@ function showPendingReviews() {
                 <h3 style="color: #4a3a4a; margin: 0;"><i class="fas fa-edit"></i> Review Transactions (${pendingTransactions.length})</h3>
                 <button onclick="closeReviewModal()" style="background: transparent; border: none; font-size: 18px; cursor: pointer; color: #5a4a5a;">&times;</button>
             </div>
-            <p style="margin-bottom: 15px; color: #5a4a5a; font-size: 14px;">Review and approve transactions individually or clear duplicate uploads.</p>
+            <p style="margin-bottom: 15px; color: #5a4a5a; font-size: 14px;">Review individual transactions. Choose "Approve Only" or save a rule for future imports.</p>
             
             <div id="pendingReviewsList">
                 ${pendingTransactions.map(t => `
@@ -736,7 +723,7 @@ function showPendingReviews() {
                         ` : ''}
 
                         <p style="margin: 4px 0;"><strong>${escapeHtml(t.description)}</strong></p>
-                        <p style="margin: 4px 0; font-size: 13px; color: #5a4a5a;">Date: ${t.date} | Amount: <strong>R${Math.abs(t.amount).toFixed(2)}</strong> | Confidence: ${Math.round((t.confidence || 0.8) * 100)}%</p>
+                        <p style="margin: 4px 0; font-size: 13px; color: #5a4a5a;">Date: ${t.date} | Amount: <strong>R${Math.abs(t.amount).toFixed(2)}</strong></p>
                         
                         <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
                             <label style="font-size: 12px; color: #5a4a5a;">Category:</label>
@@ -746,10 +733,13 @@ function showPendingReviews() {
                                 ).join('')}
                             </select>
                             
-                            <button onclick="approveTransaction('${t.id}')" style="padding: 6px 16px; background: linear-gradient(135deg, #6058a3 0%, #4a4283 100%); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 13px;">
-                                Approve
+                            <button onclick="approveTransaction('${t.id}')" style="padding: 6px 14px; background: linear-gradient(135deg, #6058a3 0%, #4a4283 100%); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 12px;">
+                                Approve Only
                             </button>
-                            <button onclick="skipReviewTransaction('${t.id}')" style="padding: 6px 12px; background: rgba(196, 112, 96, 0.9); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 13px;">
+                            <button onclick="saveRuleFromReview('${t.id}')" style="padding: 6px 14px; background: rgba(255, 255, 255, 0.3); color: #3a2a3a; border: 1px solid rgba(255,255,255,0.4); border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                                Save as Permanent Rule
+                            </button>
+                            <button onclick="skipReviewTransaction('${t.id}')" style="padding: 6px 12px; background: rgba(196, 112, 96, 0.9); color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 12px;">
                                 Delete / Ignore
                             </button>
                         </div>
@@ -766,7 +756,7 @@ function showPendingReviews() {
     modal.style.display = 'flex';
 }
 
-// User Approval (No auto-rule creation from transactions)
+// 1. APPROVE TRANSACTION ONLY (NO RULE CREATION)
 function approveTransaction(id) {
     const transaction = transactions.find(t => String(t.id) === String(id));
     if (transaction) {
@@ -787,10 +777,30 @@ function approveTransaction(id) {
         if (remaining === 0) {
             closeReviewModal();
             hideReviewBanner();
-            showToast('All transactions reviewed!', 'success');
+            showToast('Transaction approved!', 'success');
         } else {
             showReviewBanner(remaining);
         }
+    }
+}
+
+// 2. OPTIONAL SAVE AS RULE FUNCTION
+function saveRuleFromReview(id) {
+    const transaction = transactions.find(t => String(t.id) === String(id));
+    if (transaction && transaction.description) {
+        const catSelect = document.getElementById(`cat-${id}`);
+        const category = catSelect ? catSelect.value : transaction.category;
+        
+        let rules = JSON.parse(localStorage.getItem('trackmyfin_rules') || '[]');
+        const kw = transaction.description.trim().toLowerCase();
+        
+        if (!rules.some(r => r.keyword === kw)) {
+            rules.push({ keyword: kw, category: category });
+            localStorage.setItem('trackmyfin_rules', JSON.stringify(rules));
+            showToast(`Rule saved for "${kw}"`, 'success');
+        }
+        
+        approveTransaction(id);
     }
 }
 
@@ -878,6 +888,22 @@ function toggleShowPending() {
     }
 }
 
+function addFilterButton() {
+    const transactionSection = document.getElementById('transactionList')?.parentElement;
+    const filterContainer = transactionSection ? transactionSection.querySelector('.flex-between') : null;
+    
+    if (filterContainer && !document.getElementById('filterPendingBtn')) {
+        const btn = document.createElement('button');
+        btn.id = 'filterPendingBtn';
+        btn.innerText = 'Show Pending Only';
+        btn.style.cssText = 'background: #6058a3; color: white; padding: 6px 16px; font-size: 12px; border-radius: 30px; margin-right: 10px; border: none; cursor: pointer;';
+        btn.onclick = toggleShowPending;
+        filterContainer.insertBefore(btn, filterContainer.children[1] || null);
+    }
+}
+
+
+// DASHBOARD AND SUMMARY UPDATES
 
 function updateAll() {
     updateDashboardSummary();
@@ -895,9 +921,7 @@ function updateAll() {
     }
 }
 
-function updateSummary() {
-    updateDashboardSummary();
-}
+function updateSummary() { updateDashboardSummary(); }
 
 function updateDashboardSummary() {
     let totalIncome = 0;
@@ -915,18 +939,10 @@ function updateDashboardSummary() {
             amt = parseFloat(t.amount.replace(/[^0-9.-]/g, '')) || 0;
         }
 
-        if (t.type === 'income' || t.type === 'Income') {
+        if (t.type === 'income' || t.type === 'Income' || t.category === 'Income') {
             totalIncome += Math.abs(amt);
-        } else if (t.type === 'expense' || t.type === 'Expense') {
-            totalExpenses += Math.abs(amt);
         } else {
-            if (t.category && t.category !== 'Income' && amt > 0) {
-                totalExpenses += Math.abs(amt);
-            } else if (amt > 0) {
-                totalIncome += Math.abs(amt);
-            } else {
-                totalExpenses += Math.abs(amt);
-            }
+            totalExpenses += Math.abs(amt);
         }
     });
 
@@ -955,7 +971,7 @@ function updateChart() {
         if (typeof t.amount === 'number') amt = t.amount;
         else if (typeof t.amount === 'string') amt = parseFloat(t.amount.replace(/[^0-9.-]/g, '')) || 0;
 
-        if (amt < 0 || (t.category && t.category !== 'Income')) {
+        if (t.category !== 'Income' && (amt < 0 || t.type === 'expense')) {
             const cat = t.category || 'Uncategorised';
             const value = Math.abs(amt);
             totals[cat] = (totals[cat] || 0) + value;
@@ -977,7 +993,7 @@ function updateChart() {
                 .map(cat => `
                     <div class="breakdown-item">
                         <span class="breakdown-label">
-                            <i class="fas fa-circle" style="color:${getCategoryColor(cat)};"></i> ${typeof escapeHtml === 'function' ? escapeHtml(cat) : cat}
+                            <i class="fas fa-circle" style="color:${getCategoryColor(cat)};"></i> ${escapeHtml(cat)}
                         </span>
                         <span class="breakdown-amount">R${totals[cat].toFixed(2)}</span>
                     </div>
@@ -1007,21 +1023,7 @@ function updateChart() {
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: '#4a3a4a' }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const value = context.parsed;
-                            const percent = totalExpense > 0
-                                ? ((value / totalExpense) * 100).toFixed(1)
-                                : 0;
-                            return `${context.label}: R${value.toFixed(2)} (${percent}%)`;
-                        }
-                    }
-                }
+                legend: { position: 'bottom', labels: { color: '#4a3a4a' } }
             }
         }
     });
@@ -1069,24 +1071,8 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-
-function addFilterButton() {
-    const filterContainer = document.querySelector('.flex-between');
-    if (filterContainer && !document.getElementById('filterPendingBtn')) {
-        const btn = document.createElement('button');
-        btn.id = 'filterPendingBtn';
-        btn.innerText = 'Show Pending Only';
-        btn.style.cssText = 'background: #6058a3; color: white; padding: 6px 16px; font-size: 12px; border-radius: 30px; margin-right: 10px; border: none; cursor: pointer;';
-        btn.onclick = toggleShowPending;
-        filterContainer.insertBefore(btn, filterContainer.children[1] || null);
-    }
-}
-
-
 function loadSampleData() {
-    if (localStorage.getItem(SAMPLE_DATA_KEY) === 'true') {
-        return;
-    }
+    if (localStorage.getItem(SAMPLE_DATA_KEY) === 'true') return;
     
     const saved = localStorage.getItem('trackmyfin_data');
     if (saved) {
@@ -1101,16 +1087,18 @@ function loadSampleData() {
     
     if (transactions.length === 0) {
         transactions = [
-            { id: 1, date: '2026-05-10', description: 'Salary Deposit', amount: 18500, category: 'Income', confidence: 0.95, needsReview: false, reviewed: true, source: 'sample' },
-            { id: 2, date: '2026-05-09', description: 'Checkers Groceries', amount: -845.50, category: 'Essential', confidence: 0.9, needsReview: false, reviewed: true, source: 'sample' },
-            { id: 3, date: '2026-05-08', description: 'H&M Clearwater Mall', amount: -320, category: 'Lifestyle', confidence: 0.45, needsReview: true, reviewed: false, source: 'sample' },
-            { id: 4, date: '2026-05-07', description: 'Online Payment', amount: -500, category: 'Lifestyle', confidence: 0.3, needsReview: true, reviewed: false, source: 'sample' }
+            { id: generateTransactionId(), date: '2026-05-10', description: 'Salary Deposit', amount: 18500, category: 'Income', confidence: 0.95, needsReview: false, reviewed: true, source: 'sample' },
+            { id: generateTransactionId(), date: '2026-05-09', description: 'Checkers Groceries', amount: -845.50, category: 'Essential', confidence: 0.9, needsReview: false, reviewed: true, source: 'sample' },
+            { id: generateTransactionId(), date: '2026-05-08', description: 'H&M Clearwater Mall', amount: -320, category: 'Lifestyle', confidence: 0.45, needsReview: true, reviewed: false, source: 'sample' },
+            { id: generateTransactionId(), date: '2026-05-07', description: 'Online Payment', amount: -500, category: 'Lifestyle', confidence: 0.3, needsReview: true, reviewed: false, source: 'sample' }
         ];
         saveData();
         localStorage.setItem(SAMPLE_DATA_KEY, 'true');
     }
 }
 
+
+// FINANCIAL GOALS
 
 function saveGoal() {
     const goalTypeEl = document.getElementById('goalType');
@@ -1145,9 +1133,8 @@ function displayGoals() {
     if (!container) return;
     
     const goals = JSON.parse(localStorage.getItem('trackmyfin_goals') || '[]');
-    
     if (goals.length === 0) {
-        container.innerHTML = '<p style="color:#888;"><i class="fas fa-info-circle"></i> No goals set yet. Add one above.</p>';
+        container.innerHTML = '<p style="color:#888;"><i class="fas fa-info-circle"></i> No goals set yet.</p>';
         return;
     }
     
@@ -1188,6 +1175,7 @@ function clearAllGoals() {
 }
 
 
+// DEBT MANAGEMENT
 
 function addDebt() {
     const nameEl = document.getElementById('debtName');
@@ -1205,7 +1193,6 @@ function addDebt() {
     }
     
     let debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
-    
     debts.unshift({
         id: Date.now(),
         name: name,
@@ -1229,7 +1216,6 @@ function displayDebts() {
     if (!container) return;
     
     const debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
-    
     if (debts.length === 0) {
         container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i> No debts added yet</div>';
         return;
@@ -1270,8 +1256,9 @@ function updateDebtSummary() {
 
     if (budgetInput && !budgetInput.dataset.simulatorBound) {
         budgetInput.addEventListener('input', () => {
+            const freshDebts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
             renderDebtPayoffSimulator();
-            fetchAICoachAdvice(debts, parseFloat(budgetInput.value) || 0);
+            fetchAICoachAdvice(freshDebts, parseFloat(budgetInput.value) || 0);
         });
         budgetInput.dataset.simulatorBound = 'true';
     }
@@ -1294,7 +1281,7 @@ function deleteDebt(id) {
     localStorage.setItem('trackmyfin_debts', JSON.stringify(debts));
     displayDebts();
     updateDebtSummary();
-    showToast('Debt settled and removed!');
+    showToast('Debt settled!');
 }
 
 
@@ -1368,12 +1355,12 @@ function renderDebtPayoffSimulator() {
     let debts = JSON.parse(localStorage.getItem('trackmyfin_debts') || '[]');
 
     if (debts.length === 0) {
-        container.innerHTML = '<p style="color: #888; font-size: 13px;">Add debts above to use the payoff simulator.</p>';
+        container.innerHTML = '<p style="color: #888; font-size: 13px;">Add debts above to use the simulator.</p>';
         return;
     }
 
     if (monthlyBudget <= 0) {
-        container.innerHTML = '<p style="color: #888; font-size: 13px;">Enter a monthly budget amount to run the simulator.</p>';
+        container.innerHTML = '<p style="color: #888; font-size: 13px;">Enter a monthly budget amount.</p>';
         return;
     }
 
@@ -1403,15 +1390,15 @@ function renderDebtPayoffSimulator() {
                 </div>
             </div>
             <p style="font-size: 12px; color: #555; margin: 0;">
-                 <strong>AI Recommendation:</strong> ${interestDiff > 100 ? `The <strong>Avalanche method</strong> saves you approximately <strong>R${interestDiff.toFixed(2)}</strong> in total interest compared to Snowball.` : `Both methods yield similar timelines, but Snowball gives you quick psychological wins by clearing smaller balances first.`}
+                 <strong>AI Recommendation:</strong> ${interestDiff > 100 ? `The <strong>Avalanche method</strong> saves you approximately <strong>R${interestDiff.toFixed(2)}</strong> in total interest compared to Snowball.` : `Both methods yield similar timelines.`}
             </p>
         </div>
     `;
 }
 
-// ============================================
-// BUDGET
-// ============================================
+
+// BUDGET MANAGEMENT
+
 function saveBudgets() {
     const essential = document.getElementById('budgetEssential')?.value;
     const lifestyle = document.getElementById('budgetLifestyle')?.value;
@@ -1472,11 +1459,15 @@ function updateBudgetDisplay() {
         
         transactions.forEach(t => {
             if (t.amount < 0) {
-                const tDate = new Date(t.date);
-                if (tDate.getMonth() === month && tDate.getFullYear() === year) {
-                    if (t.category === 'Essential') essentialSpent += Math.abs(t.amount);
-                    else if (t.category === 'Lifestyle') lifestyleSpent += Math.abs(t.amount);
-                    else if (t.category === 'Financial') financialSpent += Math.abs(t.amount);
+                const parts = t.date.split('-');
+                if (parts.length === 3) {
+                    const tMonth = parseInt(parts[1], 10) - 1;
+                    const tYear = parseInt(parts[0], 10);
+                    if (tMonth === month && tYear === year) {
+                        if (t.category === 'Essential') essentialSpent += Math.abs(t.amount);
+                        else if (t.category === 'Lifestyle') lifestyleSpent += Math.abs(t.amount);
+                        else if (t.category === 'Financial') financialSpent += Math.abs(t.amount);
+                    }
                 }
             }
         });
@@ -1563,9 +1554,7 @@ function loadProfile() {
             if (goalEl) goalEl.value = profile.goal || '';
             
             displayProfile();
-        } catch(e) {
-            console.error('Error loading profile:', e);
-        }
+        } catch(e) {}
     }
 }
 
@@ -1574,9 +1563,8 @@ function displayProfile() {
     if (!container) return;
     
     const saved = localStorage.getItem('trackmyfin_profile');
-    
     if (!saved) {
-        container.innerHTML = '<p style="color:#888;"><i class="fas fa-info-circle"></i> No profile set yet. Fill in the form above.</p>';
+        container.innerHTML = '<p style="color:#888;"><i class="fas fa-info-circle"></i> No profile set yet.</p>';
         return;
     }
     
@@ -1591,9 +1579,7 @@ function displayProfile() {
                 <p style="font-size:12px; color:#888; margin-top:8px;">Updated: ${profile.updatedAt}</p>
             </div>
         `;
-    } catch(e) {
-        console.error('Error displaying profile:', e);
-    }
+    } catch(e) {}
 }
 
 
@@ -1613,7 +1599,6 @@ function addCustomCategory() {
     }
     
     let categories = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
-    
     if (categories.some(c => (c.name || c).toLowerCase() === name.toLowerCase())) {
         alert('Category already exists');
         return;
@@ -1631,7 +1616,6 @@ function addCustomCategory() {
     updateAll();
     
     if (typeof populateRuleCategories === 'function') populateRuleCategories();
-    
     showToast(`Category "${name}" added!`);
     nameEl.value = '';
 }
@@ -1643,9 +1627,7 @@ function removeCustomCategory(index) {
     localStorage.setItem('trackmyfin_custom_categories', JSON.stringify(categories));
     displayCustomCategories();
     updateAll();
-    
     if (typeof populateRuleCategories === 'function') populateRuleCategories();
-    
     showToast(`Category "${removed}" removed`);
 }
 
@@ -1654,7 +1636,6 @@ function displayCustomCategories() {
     if (!container) return;
     
     const categories = JSON.parse(localStorage.getItem('trackmyfin_custom_categories') || '[]');
-    
     if (categories.length === 0) {
         container.innerHTML = '<p style="color:#888;"><i class="fas fa-info-circle"></i> No custom categories added yet</p>';
         return;
@@ -1703,10 +1684,7 @@ function editCustomCategory(oldName) {
     localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
     transactions = txs;
 
-    if (typeof showToast === 'function') {
-        showToast('Category updated successfully');
-    }
-    
+    showToast('Category updated successfully');
     displayCustomCategories();
     if (typeof populateRuleCategories === 'function') populateRuleCategories();
     updateAll();
@@ -1727,12 +1705,8 @@ function applyRulesToExisting() {
     localStorage.setItem('trackmyfin_data', JSON.stringify(txs));
     transactions = txs;
     
-    if (typeof showToast === 'function') {
-        showToast(`Applied rules to ${updatedCount} transactions`);
-    }
-    if (typeof updateAll === 'function') {
-        updateAll();
-    }
+    showToast(`Applied rules to ${updatedCount} transactions`);
+    updateAll();
 }
 
 function exportAllData() {
@@ -1757,7 +1731,7 @@ function exportAllData() {
 }
 
 
-// AI-POWERED REPORT GENERATION & PDF EXPORT
+// REPORT GENERATION & EXPORTS
 
 async function generateReport() {
     const monthInput = document.getElementById('reportMonth')?.value;
@@ -1778,7 +1752,7 @@ async function generateReport() {
 
     monthTx.forEach(t => {
         const amt = Math.abs(t.amount);
-        if (t.type === 'income' || t.amount > 0) {
+        if (t.type === 'income' || t.amount > 0 || t.category === 'Income') {
             income += amt;
         } else {
             expenses += amt;
@@ -1815,7 +1789,6 @@ async function generateReport() {
         if (!response.ok) throw new Error('Failed to generate report from server');
 
         const data = await response.json();
-        
         const badgeClass = data.source === 'ai' ? 'style="background:#6058a3; color:#fff;"' : 'style="background:#aaa; color:#fff;"';
         const badgeText = data.source === 'ai' ? 'AI Generated' : 'Rule Summary';
 
@@ -1839,23 +1812,21 @@ async function generateReport() {
 
     } catch (err) {
         console.error('Report Generation Error:', err);
-        reportContent.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i> Failed to generate report. Please check your backend connection.</div>`;
+        reportContent.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i> Failed to generate report. Check connection.</div>`;
     }
 }
 
-// Multi-Paragraph PDF Export Fix using jsPDF
 function exportReportPDF() {
-    const reportContent = document.getElementById('reportContent');
     const summaryTextEl = document.getElementById('reportSummaryText');
     const monthInput = document.getElementById('reportMonth')?.value || 'summary';
     
-    if (!reportContent || !summaryTextEl || summaryTextEl.innerText.trim() === '') {
+    if (!summaryTextEl || summaryTextEl.innerText.trim() === '') {
         showToast('Please generate a valid report first', 'warning');
         return;
     }
 
     if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
-        showToast('jsPDF library loading... falling back to print view', 'info');
+        showToast('jsPDF library loading... printing page', 'info');
         window.print();
         return;
     }
@@ -1884,18 +1855,12 @@ function exportReportPDF() {
     const splitSummary = doc.splitTextToSize(fullText, 180);
     
     doc.text(splitSummary, 14, 44);
-
     doc.save(`TrackMyFin_Report_${monthInput}.pdf`);
     showToast('PDF downloaded successfully!', 'success');
 }
 
-function exportPDF() {
-    exportReportPDF();
-}
-function exportReportToPDF() {
-    exportReportPDF();
-}
-
+function exportReportToPDF() { exportReportPDF(); }
+function exportPDF() { exportReportPDF(); }
 window.generateReport = generateReport;
 
 function exportCSV() {
@@ -1908,11 +1873,7 @@ function exportCSV() {
         return;
     }
 
-    const [year, monthNum] = month.split('-');
-    const filtered = transactions.filter(t => {
-        const tDate = new Date(t.date);
-        return tDate.getMonth() === parseInt(monthNum) - 1 && tDate.getFullYear() === parseInt(year);
-    });
+    const filtered = transactions.filter(t => t.date && t.date.startsWith(month));
     
     if (filtered.length === 0) {
         alert('No transactions for this month');
@@ -2028,38 +1989,16 @@ function init() {
     loadSampleData();
     updateAll();
     
-    if (document.getElementById('transactionList')) {
-        addFilterButton();
-    }
-    if (document.getElementById('debtList')) {
-        displayDebts();
-        updateDebtSummary();
-    }
-    if (document.getElementById('goalDisplay')) {
-        displayGoals();
-    }
-    if (document.getElementById('profileDisplay')) {
-        displayProfile();
-    }
-    if (document.getElementById('profileName')) {
-        loadProfile();
-    }
-    if (document.getElementById('savingsDisplay')) {
-        displaySavingsGoal();
-    }
-    if (document.getElementById('budgetEssential')) {
-        loadBudgets();
-        updateBudgetDisplay();
-    }
-    if (document.getElementById('customCategoryList')) {
-        displayCustomCategories();
-    }
-    if (document.getElementById('ruleCategorySelect')) {
-        populateRuleCategories();
-    }
-    if (document.getElementById('customRulesContainer')) {
-        renderCustomRules();
-    }
+    if (document.getElementById('transactionList')) addFilterButton();
+    if (document.getElementById('debtList')) { displayDebts(); updateDebtSummary(); }
+    if (document.getElementById('goalDisplay')) displayGoals();
+    if (document.getElementById('profileDisplay')) displayProfile();
+    if (document.getElementById('profileName')) loadProfile();
+    if (document.getElementById('savingsDisplay')) displaySavingsGoal();
+    if (document.getElementById('budgetEssential')) { loadBudgets(); updateBudgetDisplay(); }
+    if (document.getElementById('customCategoryList')) displayCustomCategories();
+    if (document.getElementById('ruleCategorySelect')) populateRuleCategories();
+    if (document.getElementById('customRulesContainer')) renderCustomRules();
     
     console.log('Track My Fin ready.');
     if (!USE_REAL_API) {
@@ -2109,6 +2048,9 @@ function switchTab(tabName) {
         generateReport();
     }
 }
+
+
+// RULE ENGINE AND USER RULES
 
 function populateRuleCategories() {
     const select = document.getElementById('ruleCategorySelect');
@@ -2204,33 +2146,33 @@ async function fetchAICoachAdvice(debts, monthlyBudget) {
 
     aiEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Fin is analyzing your strategy...`;
 
-   try {
-    const payloadData = {
-        promptType: 'debt_coach',
-        debts: debts,
-        monthlyBudget: monthlyBudget || 0,
-        userGoal: 'Provide encouraging, friendly AI coaching to pay off debt'
-    };
+    try {
+        const payloadData = {
+            promptType: 'debt_coach',
+            debts: debts,
+            monthlyBudget: monthlyBudget || 0,
+            userGoal: 'Provide encouraging, friendly AI coaching to pay off debt'
+        };
 
-    const response = await fetch(REPORT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payloadData)
-    });
+        const response = await fetch(REPORT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloadData)
+        });
 
-    if (!response.ok) throw new Error('AI Coach backend error');
+        if (!response.ok) throw new Error('AI Coach backend error');
 
-    const data = await response.json();
-    
-    if (data && (data.summary || data.response)) {
-        aiEl.innerHTML = escapeHtml(data.summary || data.response);
-    } else {
+        const data = await response.json();
+        
+        if (data && (data.summary || data.response)) {
+            aiEl.innerHTML = escapeHtml(data.summary || data.response);
+        } else {
+            renderSmartCoachFallback(debts, monthlyBudget, aiEl);
+        }
+    } catch (error) {
+        console.error('AI Coach Connection Error:', error);
         renderSmartCoachFallback(debts, monthlyBudget, aiEl);
     }
-} catch (error) {
-    console.error('AI Coach Connection Error:', error);
-    renderSmartCoachFallback(debts, monthlyBudget, aiEl);
-}
 }
 
 function renderSmartCoachFallback(debts, monthlyBudget, aiEl) {
