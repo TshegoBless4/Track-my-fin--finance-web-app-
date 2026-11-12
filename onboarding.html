@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Track My Fin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="fin-companion.css?v=5">
+    <link rel="stylesheet" href="onboarding.css?v=5">
+</head>
+<body class="ob">
+    <script>if(/from=splash/.test(location.search))document.body.classList.add("from-splash");</script>
+    <div class="ambient" aria-hidden="true"><span class="wave w1"></span><span class="wave w2"></span><span class="wave w3"></span><span class="wave w4"></span></div>
+    <div class="ob-wave a" aria-hidden="true"></div><div class="ob-wave b" aria-hidden="true"></div>
+
+    <main class="ob-card" aria-label="Getting started guide">
+        <header class="ob-head">
+            <span class="brand"><span class="logo"><i class="fas fa-wand-magic-sparkles"></i></span>Track My Fin</span>
+            <button id="obSkip">Skip guide</button>
+        </header>
+
+        <div class="ob-stage" aria-live="polite">
+            <section class="ob-slide is-active">
+                <div>
+                    <p class="eyebrow">Welcome to Track My Fin</p>
+                    <h1>Money management, made calmer.</h1>
+                    <p class="copy">Track My Fin brings your spending, plans, debt, and goals together in one clear place.</p>
+                </div>
+                <div class="ob-vis" aria-hidden="true">
+                    <div class="orbit"><span class="ring r1"></span><span class="ring r2"></span>
+                        <span class="orb"><i class="fas fa-wand-magic-sparkles"></i></span>
+                        <span class="mini m1"><i class="far fa-credit-card"></i><span>Available<b>R16,590</b></span></span>
+                        <span class="mini m2"><i class="fas fa-bullseye"></i><span>Goal<b>72%</b></span></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ob-slide">
+                <div>
+                    <p class="eyebrow">Step 1 &middot; Capture</p>
+                    <h1>Start with what comes in and goes out.</h1>
+                    <p class="copy">Add a transaction from Overview. Track My Fin updates your balance and activity instantly.</p>
+                </div>
+                <div class="ob-vis" aria-hidden="true">
+                    <div class="tilt t1"><p class="eyebrow">New transaction</p>
+                        <div class="tx-mock"><span><i class="far fa-credit-card" style="margin-right:10px;color:var(--ink-3)"></i>Groceries</span><b>&minus; R842</b></div>
+                        <span class="btn-primary pill" style="color:#fff;border:0;display:flex;width:max-content;margin-left:auto"><i class="fas fa-plus"></i> Add transaction</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ob-slide">
+                <div>
+                    <p class="eyebrow">Step 2 &middot; Import</p>
+                    <h1>Bring your bank statement in.</h1>
+                    <p class="copy">Upload a CSV or PDF and Track My Fin sorts each transaction for you. Anything it is unsure about waits for your review. Your data stays in this browser.</p>
+                </div>
+                <div class="ob-vis" aria-hidden="true">
+                    <div class="tilt t1"><p class="eyebrow">Bank statement</p>
+                        <div class="tx-mock"><span><i class="far fa-file-lines" style="margin-right:10px;color:var(--ink-3)"></i>statement.csv</span><b style="color:var(--green)">38 sorted</b></div>
+                        <div class="chips-mini"><span>Essential</span><span>Lifestyle</span><span>Financial</span><span class="warn">2 to review</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ob-slide">
+                <div>
+                    <p class="eyebrow">Step 3 &middot; Plan</p>
+                    <h1>Build a budget that fits real life.</h1>
+                    <p class="copy">Set flexible category limits, see what is safe to spend, and adjust your plan as life changes.</p>
+                </div>
+                <div class="ob-vis" aria-hidden="true">
+                    <div class="tilt t2"><p class="eyebrow">Monthly plan</p>
+                        <div class="plan"><span>Essentials</span><div class="track"><i style="width:80%"></i></div><b>80%</b></div>
+                        <div class="plan"><span>Lifestyle</span><div class="track"><i style="width:61%"></i></div><b>61%</b></div>
+                        <div class="plan"><span>Future you</span><div class="track"><i style="width:42%"></i></div><b>42%</b></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ob-slide">
+                <div>
+                    <p class="eyebrow">Step 4 &middot; Grow</p>
+                    <h1>Let progress become your motivation.</h1>
+                    <p class="copy">Track debt payoff, follow your goals, and use monthly reports to make your next best decision.</p>
+                </div>
+                <div class="ob-vis" aria-hidden="true">
+                    <div class="tilt t3 note-mini"><span class="ico"><i class="fas fa-wand-magic-sparkles"></i></span><p class="eyebrow" style="margin-bottom:0">A note from Track My Fin</p>
+                        <h4>You saved 12% more this month.</h4><p>Your Cape Town goal is now only R4,200 away.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ob-slide">
+                <div>
+                    <p class="eyebrow">Meet Fin</p>
+                    <h1>Hi, I&rsquo;m Fin.</h1>
+                    <p class="copy">I&rsquo;ll help you understand your money, plan your next move, and celebrate your progress. Find me in the corner of every page, any time you want a hand.</p>
+                </div>
+                <div class="ob-vis" aria-hidden="true">
+                    <div class="orbit"><span class="ring r1"></span><span class="ring r2"></span>
+                        <span class="fin-av xl orb-fin"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M32 10v6"/><circle cx="32" cy="7.5" r="2.4" fill="currentColor" stroke="none"/><rect x="13" y="17" width="38" height="31" rx="14"/><path d="M9.5 30v6M54.5 30v6"/><g class="fin-eyes"><ellipse class="fin-eye" cx="25" cy="31" rx="2.6" ry="3.3" fill="currentColor" stroke="none"/><ellipse class="fin-eye" cx="39" cy="31" rx="2.6" ry="3.3" fill="currentColor" stroke="none"/></g><path d="M26 40c3.2 3 8.8 3 12 0"/></svg></span>
+                        <span class="mini m1"><i class="fas fa-wand-magic-sparkles"></i><span>Fin<b>AI companion</b></span></span>
+                        <span class="mini m2"><i class="far fa-comment-dots"></i><span>Ask me<b>anything</b></span></span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <footer class="ob-foot">
+            <div class="ob-dots" id="obDots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="ob-actions">
+                <button class="back" id="obBack" hidden>Back</button>
+                <button class="btn-primary" id="obNext">Continue <i class="fas fa-chevron-right"></i></button>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+    (function () {
+        var slides = [].slice.call(document.querySelectorAll('.ob-slide')),
+            dots = [].slice.call(document.querySelectorAll('#obDots i')),
+            back = document.getElementById('obBack'), next = document.getElementById('obNext'), i = 0;
+        function finish() { try { localStorage.setItem('trackmyfin_onboarded', '1'); } catch (e) {} location.href = 'index.html'; }
+        function show(n) {
+            i = Math.max(0, Math.min(slides.length - 1, n));
+            slides.forEach(function (s, k) { s.classList.toggle('is-active', k === i); });
+            dots.forEach(function (d, k) { d.classList.toggle('on', k === i); });
+            back.hidden = i === 0;
+            next.innerHTML = (i === slides.length - 1 ? 'Meet Fin and enter my dashboard' : 'Continue') + ' <i class="fas fa-chevron-right"></i>';
+        }
+        next.addEventListener('click', function () { i === slides.length - 1 ? finish() : show(i + 1); });
+        back.addEventListener('click', function () { show(i - 1); });
+        document.getElementById('obSkip').addEventListener('click', finish);
+        document.addEventListener('keydown', function (e) { if (e.key === 'ArrowRight') next.click(); if (e.key === 'ArrowLeft' && i > 0) show(i - 1); });
+    })();
+    </script>
+</body>
+</html>

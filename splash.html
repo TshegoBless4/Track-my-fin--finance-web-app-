@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track My Fin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="splash.css?v=5">
+</head>
+<body>
+    <div class="sp-bg" aria-hidden="true">
+        <div class="sw s1"><i></i></div><div class="sw s2"><i></i></div><div class="sw s3"><i></i></div><div class="sw s4"><i></i></div>
+    </div>
+    <button class="skip" id="skip">Skip intro</button>
+    <main class="sp-stage" aria-label="Track My Fin">
+        <div class="sp-mark" aria-hidden="true">
+            <span class="sp-halo"></span>
+            <span class="sp-logo">
+                <svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7c1.6 8.6 3.4 10.4 12 12-8.6 1.6-10.4 3.4-12 12-1.6-8.6-3.4-10.4-12-12 8.6-1.6 10.4-3.4 12-12z"/><path d="M36 30c.7 3.7 1.5 4.5 5.2 5.2-3.7.7-4.5 1.5-5.2 5.2-.7-3.7-1.5-4.5-5.2-5.2 3.7-.7 4.5-1.5 5.2-5.2z" fill="#fff" stroke="none"/></svg>
+            </span>
+        </div>
+        <h1 class="sp-name">Track My Fin</h1>
+        <p class="sp-tag">Your money, beautifully clear.</p>
+    </main>
+    <div class="sp-progress" aria-hidden="true"><i></i></div>
+
+    <script>
+    (function () {
+        var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var T_FADE = reduce ? 1000 : 4550, T_END = reduce ? 1400 : 5200, gone = false;
+        try { sessionStorage.setItem('tmf_splash', '1'); } catch (e) {}
+        var onboarded = false; try { onboarded = !!localStorage.getItem('trackmyfin_onboarded'); } catch (e) {}
+        var dest = onboarded ? 'index.html' : 'onboarding.html?from=splash';
+        function leave(ms) {
+            if (gone) return; gone = true;
+            document.body.classList.add('leaving');
+            setTimeout(function () { location.href = dest; }, ms);
+        }
+        var a = setTimeout(function () { leave(T_END - T_FADE); }, T_FADE);
+        function skip() { clearTimeout(a); leave(reduce ? 200 : 450); }
+        document.getElementById('skip').addEventListener('click', function (e) { e.stopPropagation(); skip(); });
+        document.addEventListener('click', skip);
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') skip(); });
+    })();
+    </script>
+</body>
+</html>

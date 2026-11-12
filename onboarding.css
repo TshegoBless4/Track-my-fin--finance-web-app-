@@ -1,0 +1,417 @@
+@view-transition {
+  navigation: auto;
+}
+/* Onboarding guide — pairs with style.css (ambient waves, buttons, fonts) */
+body.ob {
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.ob-wave {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.55;
+  z-index: -1;
+  will-change: transform;
+}
+.ob-wave.a {
+  width: 70vw;
+  height: 50vh;
+  left: -10vw;
+  bottom: -14vh;
+  background: linear-gradient(40deg, #b99ad2, #e9a3b4);
+  animation: waveDriftTwo 20s cubic-bezier(0.45, 0.05, 0.35, 0.95) -4s infinite
+    alternate;
+}
+.ob-wave.b {
+  width: 60vw;
+  height: 44vh;
+  right: -8vw;
+  top: -10vh;
+  background: linear-gradient(200deg, #f4a9a8, #c6a1d6);
+  animation: waveDriftOne 17s cubic-bezier(0.45, 0.05, 0.35, 0.95) -8s infinite
+    alternate;
+}
+.ob-card {
+  width: min(940px, 100%);
+  height: min(580px, calc(100vh - 40px));
+  min-height: 520px;
+  border-radius: 40px;
+  display: grid;
+  grid-template-rows: 80px 1fr 90px;
+  overflow: hidden;
+  background: var(--glass);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  box-shadow:
+    0 30px 90px rgba(110, 70, 140, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  animation: pageIn 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.ob-head,
+.ob-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 26px;
+}
+.ob-head {
+  border-bottom: 1px solid var(--line);
+}
+.ob-foot {
+  border-top: 1px solid var(--line);
+}
+.ob-head button {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  color: var(--ink-2);
+  font-size: 13px;
+  padding: 8px;
+}
+.ob-head button:hover {
+  background: none;
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+}
+.ob-stage {
+  position: relative;
+}
+.ob-slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  grid-template-columns: 1.05fr 0.95fr;
+  align-items: center;
+  gap: 20px;
+  padding: 0 60px;
+}
+.ob-slide.is-active {
+  display: grid;
+  animation: obIn 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes obIn {
+  from {
+    opacity: 0;
+    transform: translateX(26px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ob-slide h1 {
+  font: 500 clamp(34px, 4.6vw, 56px)/1.03 var(--font-head);
+  letter-spacing: -0.045em;
+  margin: 6px 0 20px;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+.ob-slide p.copy {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  max-width: 380px;
+}
+.ob-vis {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+}
+.ob-dots {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+.ob-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: rgba(112, 84, 134, 0.25);
+  transition:
+    width 0.35s,
+    background 0.35s;
+}
+.ob-dots i.on {
+  width: 28px;
+  background: var(--purple);
+}
+.ob-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ob-actions .back {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  color: var(--ink-2);
+  padding: 10px;
+}
+.ob-actions .back:hover {
+  background: none;
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+}
+#obNext {
+  animation: ctaPulse 2.6s ease-in-out infinite;
+  padding: 14px 22px;
+}
+#obNext i {
+  margin: 0 0 0 10px;
+  font-size: 11px;
+}
+@keyframes ctaPulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 10px 24px rgba(90, 70, 125, 0.32);
+  }
+  50% {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 36px rgba(90, 70, 125, 0.45);
+  }
+}
+
+/* slide 1: orbit */
+.orbit {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  animation: floatA 6s ease-in-out infinite;
+}
+.ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(112, 84, 134, 0.18);
+}
+.ring.r1 {
+  inset: 0;
+  border-style: dashed;
+  animation: spin 40s linear infinite;
+}
+.ring.r2 {
+  inset: 40px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.orb {
+  position: absolute;
+  left: 96px;
+  top: 96px;
+  width: 108px;
+  height: 108px;
+  border-radius: 32px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 32px;
+  transform: rotate(8deg);
+  background: linear-gradient(140deg, #8573aa, #d98f9c);
+  box-shadow: 0 20px 50px rgba(110, 70, 140, 0.4);
+}
+.mini {
+  position: absolute;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 30px rgba(110, 80, 140, 0.15);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.mini b {
+  display: block;
+  font-size: 14px;
+  color: var(--ink);
+  font-weight: 700;
+}
+.mini.m1 {
+  right: -40px;
+  top: 20px;
+  animation: floatA 5s ease-in-out infinite;
+}
+.mini.m2 {
+  left: -50px;
+  bottom: 36px;
+  animation: floatB 7s ease-in-out infinite;
+}
+@keyframes floatA {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes floatB {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(12px);
+  }
+}
+
+/* slides 2-4: tilted cards */
+.tilt {
+  width: 100%;
+  max-width: 370px;
+  padding: 24px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 20px 50px rgba(110, 80, 140, 0.18);
+}
+.tilt.t1 {
+  transform: rotate(1.6deg);
+  animation: floatA 6s ease-in-out infinite;
+}
+.tilt.t2 {
+  transform: rotate(-2.4deg);
+  animation: floatB 7s ease-in-out infinite;
+}
+.tilt.t3 {
+  transform: rotate(1.4deg);
+  animation: floatA 6.5s ease-in-out infinite;
+}
+.tilt .eyebrow {
+  font-size: 10px;
+  margin-bottom: 14px;
+}
+.tx-mock {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.tx-mock b {
+  color: var(--red);
+  font-size: 12.5px;
+}
+.tilt .btn-primary {
+  margin-left: auto;
+  display: block;
+  font-size: 12px;
+  padding: 10px 16px;
+}
+.plan {
+  display: grid;
+  grid-template-columns: 70px 1fr 38px;
+  gap: 12px;
+  align-items: center;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  margin-bottom: 14px;
+}
+.plan:last-child {
+  margin-bottom: 0;
+}
+.plan b {
+  font-size: 11px;
+  color: var(--ink);
+  text-align: right;
+}
+.plan .track {
+  margin: 0;
+}
+.ob-slide:not(.is-active) .track > i {
+  animation: none;
+}
+.ob-slide.is-active .plan .track > i {
+  animation: grow 1.1s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.note-mini .ico {
+  margin-bottom: 16px;
+}
+.note-mini h4 {
+  font: 500 20px/1.25 var(--font-head);
+  letter-spacing: -0.03em;
+  margin: 6px 0;
+}
+.note-mini p {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+@media (max-width: 760px) {
+  .ob-card {
+    height: auto;
+    min-height: calc(100vh - 40px);
+    grid-template-rows: 70px 1fr 80px;
+  }
+  .ob-slide {
+    grid-template-columns: 1fr;
+    padding: 14px 26px;
+    overflow-y: auto;
+    align-content: start;
+  }
+  .ob-vis {
+    min-height: 240px;
+  }
+  .orbit {
+    transform: scale(0.8);
+  }
+  .mini.m1 {
+    right: -10px;
+  }
+  .mini.m2 {
+    left: -10px;
+  }
+}
+
+.fin-av.xl {
+  width: 112px;
+  height: 112px;
+  border-radius: 34px;
+}
+.orb-fin {
+  position: absolute;
+  left: 94px;
+  top: 94px;
+  transform: rotate(-4deg);
+  animation: floatB 6s ease-in-out infinite;
+}
+body.from-splash .ambient {
+  animation: ambSettle 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+body.from-splash .ob-card {
+  animation: obCardIn 1s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes ambSettle {
+  from {
+    transform: scale(1.25);
+    filter: blur(14px);
+  }
+  to {
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes obCardIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

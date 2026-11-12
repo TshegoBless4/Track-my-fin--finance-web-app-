@@ -5,82 +5,113 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Track My Fin - Budget</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="fin-companion.css?v=5">
 </head>
 <body>
+    <div class="ambient" aria-hidden="true"><span class="wave w1"></span><span class="wave w2"></span><span class="wave w3"></span><span class="wave w4"></span></div>
     <div class="container">
 
-        <!-- Navigation -->
-        <nav class="top-nav">
-            <a href="index.html"><i class="fas fa-chart-pie"></i> Dashboard</a>
-            <a href="budget.html" class="active"><i class="fas fa-wallet"></i> Budget</a>
-            <a href="debt.html"><i class="fas fa-credit-card"></i> Debt</a>
-            <a href="reports.html"><i class="fas fa-file-alt"></i> Reports</a>
-            <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+        <nav class="top-nav" aria-label="Main navigation">
+            <a class="brand" href="index.html"><span class="logo"><i class="fas fa-wand-magic-sparkles"></i></span>Track My Fin</a>
+            <div class="nav-links">
+                <a href="index.html"><i class="fas fa-table-cells-large"></i> Overview</a>
+                <a href="budget.html" class="active" aria-current="page"><i class="fas fa-wallet"></i> Budget</a>
+                <a href="debt.html"><i class="fas fa-credit-card"></i> Debt</a>
+                <a href="reports.html"><i class="fas fa-arrow-trend-up"></i> Reports</a>
+                <a href="settings.html"><i class="fas fa-bullseye"></i> Settings</a>
+            </div>
+            <a class="user-chip" href="settings.html" aria-label="Your profile"><span><strong id="navName">Welcome</strong><small>Personal account</small></span><span class="avatar" id="navAvatar">TM</span></a>
         </nav>
 
-        <h1><i class="fas fa-wallet"></i> Budget</h1>
-        <p class="subtitle">Set your monthly spending limits and track progress</p>
-
-        <!-- Monthly Budgets - With Save Button -->
-        <div class="section">
-            <h3><i class="fas fa-pencil-alt"></i> Set Monthly Budgets</h3>
-            <div class="budget-grid">
-                <div class="budget-item">
-                    <label><i class="fas fa-circle" style="color:#6058a3;"></i> Essential</label>
-                    <input type="number" id="budgetEssential" placeholder="R0" value="">
-                </div>
-                <div class="budget-item">
-                    <label><i class="fas fa-circle" style="color:#b271af;"></i> Lifestyle</label>
-                    <input type="number" id="budgetLifestyle" placeholder="R0" value="">
-                </div>
-                <div class="budget-item">
-                    <label><i class="fas fa-circle" style="color:#7aa2c6;"></i> Financial</label>
-                    <input type="number" id="budgetFinancial" placeholder="R0" value="">
-                </div>
+        <header class="page-head">
+            <div>
+                <p class="eyebrow" id="monthLabel">Monthly spending plan</p>
+                <h1>A budget that breathes.</h1>
+                <p class="subtitle">Give every rand a purpose without making life feel restrictive.</p>
             </div>
-            <button onclick="saveBudgets()" style="margin-top:15px;"><i class="fas fa-save"></i> Save Budgets</button>
-            <div id="budgetStatus" style="margin-top:10px;"></div>
+            <div class="head-actions">
+                <div class="month-switch" id="monthSwitch" role="group" aria-label="Period">
+                    <button class="ms-btn" id="msPrev" aria-label="Previous month"><i class="fas fa-chevron-left"></i></button>
+                    <button class="ms-label" id="msLabel" aria-haspopup="listbox" aria-expanded="false" aria-controls="msMenu"><i class="far fa-calendar"></i><b id="msText">This month</b><i class="fas fa-chevron-down caret"></i></button>
+                    <button class="ms-btn" id="msNext" aria-label="Next month"><i class="fas fa-chevron-right"></i></button>
+                    
+                    <div class="ms-menu" id="msMenu" role="listbox" hidden></div>
+                </div>
+                <button class="btn-primary" id="openCatPanel" aria-controls="catPanel"><i class="fas fa-plus"></i> Create category</button>
+            </div>
+        </header>
+
+        <div id="finNote" class="fin-note"></div>
+
+        <section class="section cat-panel composer" id="catPanel" hidden aria-label="Create a budget category">
+            <div class="cat-grid">
+                <div><label for="newCategoryName">Category name</label><input type="text" id="newCategoryName" placeholder="e.g. Wellness"></div>
+                <div><label for="newCategoryLimit">Monthly limit</label><input type="number" id="newCategoryLimit" min="0" placeholder="R 0"></div>
+                <button class="btn-primary" id="addCatBtn">Add category</button>
+            </div>
+        </section>
+
+        <div class="hint" id="monthHint" hidden></div>
+
+        <div class="summary-cards">
+            <div class="card"><div class="stat-top"><span class="ico"><i class="far fa-credit-card"></i></span><h3>Monthly budget</h3></div><div class="amount" id="bTotal">R&nbsp;0</div><p class="delta" id="bTotalNote">Across 0 categories</p></div>
+            <div class="card"><div class="stat-top"><span class="ico"><i class="fas fa-arrow-up"></i></span><h3>Used so far</h3></div><div class="amount" id="bUsed">R&nbsp;0</div><p class="delta" id="bUsedNote">0% of your plan</p></div>
+            <div class="card"><div class="stat-top"><span class="ico"><i class="fas fa-wand-magic-sparkles"></i></span><h3>Still available</h3></div><div class="amount" id="bLeft">R&nbsp;0</div><p class="delta">Your safe-to-spend balance</p></div>
         </div>
 
-        <!-- Budget Progress -->
-        <div class="section">
-            <h3><i class="fas fa-chart-bar"></i> Budget Progress</h3>
-            <div id="budgetProgressDisplay">
-                <div class="empty-state"><i class="fas fa-inbox"></i> Set budgets above to see progress</div>
-            </div>
+        <section class="section">
+            <div class="flex-between"><div><p class="eyebrow">Category limits</p><h3>Your monthly plan</h3></div><span class="pill sm">Editable</span></div>
+                <div class="limit-row essential">
+                    <span class="ico"><i class="fas fa-wallet"></i></span>
+                    <div class="nm"><strong>Home &amp; essentials</strong><small id="spent-essential">R&nbsp;0 spent</small></div>
+                    <div class="track"><i id="bar-essential" style="width:0%"></i></div>
+                    <label class="limit-in">Limit <input type="number" id="budgetEssential" placeholder="0" min="0" aria-label="Home &amp; essentials limit"></label>
+                    <button class="x-btn" data-clear="budgetEssential" aria-label="Clear Home &amp; essentials limit"><i class="fas fa-xmark"></i></button>
+                </div>
+                <div class="limit-row lifestyle">
+                    <span class="ico"><i class="fas fa-wallet"></i></span>
+                    <div class="nm"><strong>Lifestyle</strong><small id="spent-lifestyle">R&nbsp;0 spent</small></div>
+                    <div class="track"><i id="bar-lifestyle" style="width:0%"></i></div>
+                    <label class="limit-in">Limit <input type="number" id="budgetLifestyle" placeholder="0" min="0" aria-label="Lifestyle limit"></label>
+                    <button class="x-btn" data-clear="budgetLifestyle" aria-label="Clear Lifestyle limit"><i class="fas fa-xmark"></i></button>
+                </div>
+                <div class="limit-row financial">
+                    <span class="ico"><i class="fas fa-wallet"></i></span>
+                    <div class="nm"><strong>Future you</strong><small id="spent-financial">R&nbsp;0 spent</small></div>
+                    <div class="track"><i id="bar-financial" style="width:0%"></i></div>
+                    <label class="limit-in">Limit <input type="number" id="budgetFinancial" placeholder="0" min="0" aria-label="Future you limit"></label>
+                    <button class="x-btn" data-clear="budgetFinancial" aria-label="Clear Future you limit"><i class="fas fa-xmark"></i></button>
+                </div>
+            <div id="customLimitRows"></div>
+            <div id="removedRows" class="removed-rows" hidden></div>
+            <div id="budgetStatus" role="status" style="font-size:13px;color:var(--green)"></div>
+            <div id="budgetProgressDisplay" hidden></div>
+            <details class="more"><summary><i class="fas fa-circle-question" style="margin-right:6px"></i>How does this work?</summary>
+                <p class="how">Each category has a <b>monthly limit</b> that you set (it repeats every month until you change it). <b>Spent</b> is the money that went <i>out</i> in that category during the month shown above &mdash; it comes from the transactions you add or import on Overview. <b>Used so far</b> adds up all the spending, <b>Still available</b> is your total limits minus that, and <b>Safe to spend</b> divides what is left by the days remaining this month. Seeing R0? Check the month (use the arrows), and that your imported expenses are negative amounts.</p>
+            </details>
+        </section>
+
+        <div class="grid-main" style="grid-template-columns:2fr 1fr" id="goal">
+            <section class="section" id="goalSection">
+                <div class="flex-between"><div><p class="eyebrow">Savings goals</p><h3>What you&rsquo;re saving for</h3></div><div class="goal-tools"><button class="link-soft" id="goalToggleAll" data-act="toggleall">Collapse all</button><button class="icon-btn" id="goalToggleList" data-act="togglelist" aria-expanded="true" aria-label="Hide savings goals"><i class="fas fa-chevron-up"></i></button><button class="btn-soft" data-act="new"><i class="fas fa-plus"></i> New goal</button></div></div>
+                <div id="goalList"></div>
+            </section>
+            <section class="section" style="display:flex;flex-direction:column">
+                <p class="eyebrow">Safe to spend</p>
+                <div class="save-big" id="safeDay" style="margin-top:26px">R&nbsp;0<small>/ day</small></div>
+                <p class="note" id="safeNote" style="margin-bottom:24px">Based on your remaining plan until the end of the month.</p>
+                <button class="btn-soft" id="exportBudgetBtn" style="margin-top:auto">Export budget</button>
+            </section>
         </div>
 
-        <!-- Savings Goal -->
-        <div class="section">
-            <h3><i class="fas fa-piggy-bank"></i> Savings Goal</h3>
-            <div class="form-row">
-                <input type="text" id="savingsGoalName" placeholder="Goal name (e.g., Holiday, Emergency Fund)">
-                <input type="number" id="savingsTarget" placeholder="Target amount">
-                <button onclick="saveSavingsGoal()"><i class="fas fa-save"></i> Set Goal</button>
-            </div>
-            <div id="savingsDisplay" style="margin-top:15px;">
-                <p><i class="fas fa-info-circle"></i> No savings goal set yet.</p>
-            </div>
-            <div class="budget-progress" style="margin-top:10px;">
-                <div class="budget-progress-bar essential" id="savingsProgress" style="width:0%;"></div>
-            </div>
-            <div class="budget-stats">
-                <span id="savingsCurrent">R0 saved</span>
-                <span id="savingsTargetDisplay">Target: R0</span>
-            </div>
-        </div>
-
+        <footer class="site-foot"><span>Track My Fin keeps your financial picture beautifully simple.</span><span id="dataStamp">Data updated just now</span></footer>
     </div>
-
+    <script src="ui.js?v=5"></script>
     <script src="app.js"></script>
-    <script>
-        // Load budgets when page loads
-        loadBudgets();
-        displaySavingsGoal();
-        updateBudgetDisplay();
-    </script>
+    <script src="fin-companion.js?v=5"></script>
 </body>
 </html>

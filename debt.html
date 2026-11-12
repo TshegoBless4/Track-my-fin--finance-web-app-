@@ -5,88 +5,105 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Track My Fin - Debt</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="fin-companion.css?v=5">
 </head>
 <body>
+    <div class="ambient" aria-hidden="true"><span class="wave w1"></span><span class="wave w2"></span><span class="wave w3"></span><span class="wave w4"></span></div>
     <div class="container">
 
-        <nav class="top-nav">
-            <a href="index.html"><i class="fas fa-chart-pie"></i> Dashboard</a>
-            <a href="budget.html"><i class="fas fa-wallet"></i> Budget</a>
-            <a href="debt.html" class="active"><i class="fas fa-credit-card"></i> Debt</a>
-            <a href="reports.html"><i class="fas fa-file-alt"></i> Reports</a>
-            <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+        <nav class="top-nav" aria-label="Main navigation">
+            <a class="brand" href="index.html"><span class="logo"><i class="fas fa-wand-magic-sparkles"></i></span>Track My Fin</a>
+            <div class="nav-links">
+                <a href="index.html"><i class="fas fa-table-cells-large"></i> Overview</a>
+                <a href="budget.html"><i class="fas fa-wallet"></i> Budget</a>
+                <a href="debt.html" class="active" aria-current="page"><i class="fas fa-credit-card"></i> Debt</a>
+                <a href="reports.html"><i class="fas fa-arrow-trend-up"></i> Reports</a>
+                <a href="settings.html"><i class="fas fa-bullseye"></i> Settings</a>
+            </div>
+            <a class="user-chip" href="settings.html" aria-label="Your profile"><span><strong id="navName">Welcome</strong><small>Personal account</small></span><span class="avatar" id="navAvatar">TM</span></a>
         </nav>
 
-        <h1><i class="fas fa-credit-card"></i> Debt Destroyer</h1>
-        <p class="subtitle">Track your debts and let your AI coach help you win</p>
-
-        <div class="summary-cards">
-            <div class="card">
-                <h3><i class="fas fa-credit-card"></i> Total Debt</h3>
-                <div class="amount" id="totalDebt">R0</div>
+        <header class="page-head">
+            <div>
+                <p class="eyebrow">Debt destroyer</p>
+                <h1>Your path to debt-free.</h1>
+                <p class="subtitle">A clear plan, steady progress, and no judgement along the way.</p>
             </div>
-            <div class="card">
-                <h3><i class="fas fa-percent"></i> Highest Rate</h3>
-                <div class="amount" id="highestRate">0%</div>
+            <div class="head-actions">
+                <button class="btn-soft" id="openPayComposer" aria-controls="payComposer"><i class="fas fa-check"></i> Record payment</button>
+                <button class="btn-primary" id="openDebtComposer" aria-controls="debtComposer"><i class="fas fa-plus"></i> Add debt</button>
             </div>
-            <div class="card">
-                <h3><i class="fas fa-lightbulb"></i> Payoff Strategy</h3>
-                
-               
-                <div style="display: flex; gap: 10px; align-items: flex-start; background: rgba(255, 255, 255, 0.25); padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.4); margin-top: 8px;">
-                    <div style="background: #4a3a4a; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-                        <i class="fas fa-robot" style="font-size: 14px;"></i>
-                    </div>
-                    <div style="flex: 1;">
-                        <h4 style="margin: 0 0 2px 0; font-size: 13px; color: #3a2a3a; display: flex; align-items: center; gap: 4px;">
-                            Fin <span style="font-size: 9px; background: rgba(74,58,74,0.15); padding: 1px 5px; border-radius: 8px;">Coach</span>
-                        </h4>
-                        <div id="aiRecommendation" style="font-size: 12px; line-height: 1.4; color: #4a3a4a;">
-                            Hey! Add a debt above, and I'll help you map out your custom payoff strategy. You've got this!
-                        </div>
-                    </div>
-                </div>
-                
-                
-                <div style="margin-top: 12px; background: rgba(255,255,255,0.15); padding: 10px; border-radius: 12px;">
-                    <label style="font-size: 12px; display: block; margin-bottom: 4px;">Monthly Debt Payment Budget (R):</label>
-                    <input type="number" id="monthlyDebtBudget" placeholder="e.g. 2500" style="width: 100%; padding: 5px 10px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); font-size: 13px;">
-                    
-                    <div id="debtSimulatorResult"></div>
-                </div>
+        </header>
 
-            </div>
-        </div>
+        <div id="finNote" class="fin-note"></div>
 
-        <div class="section">
-            <h3><i class="fas fa-plus-circle"></i> Add Debt</h3>
+        <section class="section composer" id="debtComposer" hidden>
+            <div class="flex-between"><div><p class="eyebrow">New balance</p><h3>Add a debt</h3></div><button class="icon-btn" id="closeDebtComposer" aria-label="Close"><i class="fas fa-xmark"></i></button></div>
             <div class="form-row">
                 <input type="text" id="debtName" placeholder="Creditor (e.g., Credit Card)">
                 <input type="number" id="debtBalance" placeholder="Balance">
-                <input type="number" id="debtRate" placeholder="Interest Rate %">
-                <button onclick="addDebt()"><i class="fas fa-plus"></i> Add Debt</button>
+                <input type="number" id="debtRate" placeholder="Interest rate %">
+                <button class="btn-primary" onclick="addDebt()"><i class="fas fa-plus"></i> Add debt</button>
             </div>
+        </section>
+
+        <section class="section composer" id="payComposer" hidden>
+            <div class="flex-between"><div><p class="eyebrow">Progress</p><h3>Record a payment</h3></div><button class="icon-btn" id="closePayComposer" aria-label="Close"><i class="fas fa-xmark"></i></button></div>
+            <div class="form-row">
+                <select id="payDebt" aria-label="Which debt" style="flex:1.4"></select>
+                <input type="number" id="payAmount" min="0" placeholder="Amount paid (R)">
+                <input type="date" id="payDate" aria-label="Date paid">
+                <button class="btn-primary" id="recordPayBtn"><i class="fas fa-check"></i> Record payment</button>
+            </div>
+            <p class="note">Your balance drops by what you paid. Pay a debt off completely and it moves to your history.</p>
+        </section>
+
+        <div class="summary-cards">
+            <div class="card"><div class="stat-top"><span class="ico"><i class="far fa-credit-card"></i></span><h3>Total remaining</h3></div><div class="amount" id="totalDebt">R0</div><p class="delta" id="debtCount">0 active balances</p></div>
+            <div class="card"><div class="stat-top"><span class="ico"><i class="fas fa-arrow-trend-up"></i></span><h3>Highest rate</h3></div><div class="amount" id="highestRate">0%</div><p class="delta" id="highestRateName">No debts yet</p></div>
+            <div class="card"><div class="stat-top"><span class="ico"><i class="far fa-calendar"></i></span><h3>Estimated payoff</h3></div><div class="amount" id="payoffEstimate">&mdash;</div><p class="delta" id="payoffNote">Enter a monthly budget</p></div>
         </div>
 
-        <div class="section">
-            <div class="flex-between">
-                <h3><i class="fas fa-list"></i> Your Debts</h3>
-                <button onclick="clearDebts()" class="btn-danger btn-small"><i class="fas fa-trash"></i> Clear All</button>
-            </div>
-            <div id="debtList">
-                <div class="empty-state"><i class="fas fa-inbox"></i> No debts added yet</div>
-            </div>
+        <div class="grid-main">
+            <section class="section">
+                <div class="flex-between"><div><p class="eyebrow">Your balances</p><h3>Debt overview</h3></div><button class="link-danger" onclick="clearDebts()">Clear all</button></div>
+                <div id="debtList"><div class="empty-state"><i class="fas fa-inbox"></i> No debts added yet</div></div>
+            </section>
+            <aside class="section coach">
+                <span class="ico"><i class="fas fa-wand-magic-sparkles"></i></span>
+                <p class="eyebrow">Track My Fin coach</p>
+                <h3 id="coachHeadline">Add a debt to get started</h3>
+                <div id="aiRecommendation">Hey! Add a debt, and I'll help you map out your custom payoff strategy. You've got this!</div>
+                <label for="monthlyDebtBudget">Monthly payment budget (all debts together)</label>
+                <input type="number" id="monthlyDebtBudget" placeholder="e.g. 2500">
+                <div id="debtSimulatorResult"></div>
+                <label for="extraPay" style="margin-top:16px">What if I paid extra each month?</label>
+                <input type="number" id="extraPay" min="0" placeholder="Extra amount (R)">
+                <p class="whatif" id="extraResult">Add a debt to try this.</p>
+                <label for="targetDate" style="margin-top:16px">I want to be debt-free by</label>
+                <input type="date" id="targetDate">
+                <p class="whatif" id="deadlineResult">Pick a date and I&rsquo;ll work out what you would need to pay each month.</p>
+                <button class="link-soft" data-ask="Build me a payoff plan for my debts, using my monthly budget and any debt-free date I have set." style="text-align:left;font-weight:600">Ask Fin to build my payoff plan</button>
+                <div class="kv"><span>Estimated monthly interest</span><b id="monthlyInterest">R&nbsp;0</b></div>
+                <button class="btn-soft" id="avalancheBtn">Use avalanche strategy</button>
+            </aside>
         </div>
 
+        <section class="section">
+            <div class="flex-between"><div><p class="eyebrow">Payment history</p><h3>What you have paid off</h3></div><span class="pill sm" id="paidTotal" style="display:none"></span></div>
+            <div id="payHistory"></div>
+        </section>
+
+        <footer class="site-foot"><span>Track My Fin keeps your financial picture beautifully simple.</span><span id="dataStamp">Data updated just now</span></footer>
     </div>
-
-    
+    <script src="ui.js?v=5"></script>
     <script src="app.js"></script>
+    <script src="fin-companion.js?v=5"></script>
     <script>
-        // Safe execution check for debt functions
         if (typeof displayDebts === 'function') displayDebts();
         if (typeof updateDebtSummary === 'function') updateDebtSummary();
     </script>
