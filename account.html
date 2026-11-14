@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in - Track My Fin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="account.css?v=8">
+    <script>window.TMF_AUTH_PAGE = true;</script>
+    <script src="auth.js?v=8"></script>
+</head>
+<body class="acc">
+    <div class="bg" aria-hidden="true"><i class="band"></i></div>
+    <button class="x" id="accClose" type="button" aria-label="Close" hidden>
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+
+    <main class="shell">
+        <section class="hero" aria-label="Welcome">
+            <div class="brand"><span class="logo"><svg viewBox="0 0 24 24"><path d="M10.5 3.5c.8 4.3 1.7 5.2 6 6-4.3.8-5.2 1.7-6 6-.8-4.3-1.7-5.2-6-6 4.3-.8 5.2-1.7 6-6z"/><path d="M18 14c.4 1.9.8 2.3 2.7 2.7-1.9.4-2.3.8-2.7 2.7-.4-1.9-.8-2.3-2.7-2.7 1.9-.4 2.3-.8 2.7-2.7z"/></svg></span>Track My Fin</div>
+            <div class="fin-tile" aria-hidden="true">
+                <svg viewBox="0 0 64 64"><path d="M32 8v6"/><circle cx="32" cy="7" r="2.2"/><path d="M14 30c0-9 8-16 18-16s18 7 18 16-8 17-18 17-18-8-18-17z"/><path d="M8 29v7M56 29v7"/><circle cx="25" cy="29" r="2.4" class="f"/><circle cx="39" cy="29" r="2.4" class="f"/><path d="M24 37c3.5 3.4 12.5 3.4 16 0"/><path d="M23 47l-2 7M41 47l2 7"/></svg>
+            </div>
+            <p class="eyebrow">Private by design</p>
+            <h1 id="heroTitle">Your financial picture is waiting.</h1>
+            <p class="lede" id="heroCopy">Sign in securely and continue exactly where you left off.</p>
+            <ul class="trust">
+                <li><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Your data belongs to you</li>
+                <li><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Protected account session</li>
+            </ul>
+        </section>
+
+        <section class="card" aria-label="Account">
+            <div class="tabs" role="tablist" id="tabs">
+                <button role="tab" id="tabIn" aria-selected="true" aria-controls="paneIn" type="button">Sign in</button>
+                <button role="tab" id="tabUp" aria-selected="false" aria-controls="paneUp" type="button">Create account</button>
+            </div>
+            <p class="preview" id="previewBar" hidden></p>
+
+            <!-- Sign in -->
+            <form class="pane" id="paneIn" role="tabpanel" aria-labelledby="tabIn" novalidate autocomplete="on">
+                <p class="eyebrow-d">Welcome back</p>
+                <h2>Good to see you again</h2>
+                <p class="sub">Use your email and password to continue.</p>
+                <label for="inEmail">Email address</label>
+                <input id="inEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required>
+                <label for="inPw">Password</label>
+                <div class="pw"><input id="inPw" type="password" autocomplete="current-password" placeholder="At least 8 characters" required><button type="button" class="eye" data-eye="inPw" aria-label="Show password"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                <div class="row">
+                    <label class="chk"><input type="checkbox" id="inRemember"><span>Remember this device</span></label>
+                    <button type="button" class="link" id="goForgot">Forgot password?</button>
+                </div>
+                <p class="err" id="inErr" role="alert" hidden></p>
+                <button class="go" type="submit" id="inGo"><span>Sign in securely</span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+            </form>
+
+            <!-- Create account: step 1 and 2 -->
+            <div class="pane" id="paneUp" role="tabpanel" aria-labelledby="tabUp" hidden>
+                <form id="up1" novalidate autocomplete="on">
+                    <p class="eyebrow-d">Step 1 of 2 &middot; Your account</p>
+                    <h2>Create your protected space</h2>
+                    <p class="sub">Your account keeps your budgets, goals, Fin conversations and progress together and private.</p>
+                    <label for="upName">Full name</label>
+                    <input id="upName" type="text" autocomplete="name" placeholder="Ayanda Mokoena" required>
+                    <label for="upEmail">Email address</label>
+                    <input id="upEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required>
+                    <label for="upPw">Password</label>
+                    <div class="pw"><input id="upPw" type="password" autocomplete="new-password" placeholder="At least 8 characters" aria-describedby="pwHelp" required><button type="button" class="eye" data-eye="upPw" aria-label="Show password"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                    <div class="meter" id="meter" aria-hidden="true"><i></i><i></i><i></i><b id="meterLabel"></b></div>
+                    <div class="help" id="pwHelp">
+                        <p id="pwTip">Length matters most. A short sentence of unrelated words is strong and easy to remember.</p>
+                        <ul>
+                            <li data-c="len">At least 8 characters</li>
+                            <li data-c="mix">A mix of letters and numbers</li>
+                            <li data-c="own">Does not contain your name or email</li>
+                        </ul>
+                    </div>
+                    <label class="chk box"><input type="checkbox" id="upConsent"><span><b>I understand my privacy choices</b><small>Fin will only use financial areas I explicitly approve.</small></span></label>
+                    <p class="err" id="up1Err" role="alert" hidden></p>
+                    <button class="go" type="submit"><span>Continue</span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+                </form>
+
+                <form id="up2" novalidate hidden>
+                    <p class="eyebrow-d">Step 2 of 2 &middot; Your financial starting point</p>
+                    <h2>Where are you starting from?</h2>
+                    <p class="sub">All optional. It helps Fin give relevant suggestions, and you can change it any time in Settings.</p>
+                    <label for="upCur">Currency</label>
+                    <select id="upCur"><option value="ZAR" selected>South African rand (R)</option></select>
+                    <label for="upInc">Approximate monthly income</label>
+                    <div class="pre"><span>R</span><input id="upInc" type="number" inputmode="decimal" min="0" step="100" placeholder="e.g. 18000"></div>
+                    <span class="lab">Primary financial goal</span>
+                    <div class="chips" id="goalChips" role="radiogroup" aria-label="Primary financial goal">
+                        <button type="button" role="radio" aria-checked="false">Build an emergency fund</button>
+                        <button type="button" role="radio" aria-checked="false">Pay off debt</button>
+                        <button type="button" role="radio" aria-checked="false">Save for something big</button>
+                        <button type="button" role="radio" aria-checked="false">Stick to a budget</button>
+                        <button type="button" role="radio" aria-checked="false">Understand my spending</button>
+                    </div>
+                    <input id="upGoal" type="text" maxlength="80" placeholder="Or write your own goal" aria-label="Your own goal">
+                    <p class="err" id="up2Err" role="alert" hidden></p>
+                    <div class="duo"><button class="back" type="button" id="up2Back">Back</button><button class="go" type="submit" id="up2Go"><span>Create my account</span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></div>
+                </form>
+            </div>
+
+            <!-- Forgot password -->
+            <form class="pane" id="paneForgot" novalidate hidden>
+                <p class="eyebrow-d">Reset password</p>
+                <h2>Let&rsquo;s get you back in</h2>
+                <p class="sub">Enter the recovery code you saved when you created your account. Track My Fin keeps no cloud copy, so that code is the only way to reset.</p>
+                <label for="fgEmail">Email address</label>
+                <input id="fgEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required>
+                <label for="fgCode">Recovery code</label>
+                <input id="fgCode" type="text" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX" class="mono" required>
+                <label for="fgPw">New password</label>
+                <div class="pw"><input id="fgPw" type="password" autocomplete="new-password" placeholder="At least 8 characters" required><button type="button" class="eye" data-eye="fgPw" aria-label="Show password"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                <p class="err" id="fgErr" role="alert" hidden></p>
+                <div class="duo"><button class="back" type="button" id="fgBack">Back</button><button class="go" type="submit" id="fgGo"><span>Reset and sign in</span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></div>
+            </form>
+
+            <!-- Recovery code -->
+            <div class="pane" id="paneCode" hidden>
+                <p class="eyebrow-d">You&rsquo;re all set</p>
+                <h2>Save your recovery code</h2>
+                <p class="sub">If you ever forget your password, this code lets you reset it. It is shown only once and is not stored anywhere we can read it.</p>
+                <div class="code" id="codeBox" aria-live="polite"></div>
+                <div class="duo two"><button class="soft" type="button" id="codeCopy">Copy code</button><button class="soft" type="button" id="codeDl">Download</button></div>
+                <label class="chk box"><input type="checkbox" id="codeSaved"><span><b>I&rsquo;ve saved my recovery code</b><small>Keep it somewhere safe, like a password manager.</small></span></label>
+                <button class="go" type="button" id="codeGo" disabled><span>Continue to Track My Fin</span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+            </div>
+
+            <p class="foot-line"><span></span>Protected account<span></span></p>
+            <p class="foot-note"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Passwords are scrambled on this device and never leave it.</p>
+        </section>
+    </main>
+    <script src="account.js?v=8"></script>
+</body>
+</html>

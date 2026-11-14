@@ -16,7 +16,7 @@ html{scroll-behavior:smooth}
 body{font-family:var(--font-body);color:var(--ink);min-height:100vh;padding:24px;background:#e8c7d3;-webkit-font-smoothing:antialiased}
 a{color:inherit}
 
-
+/* ---------- ambient waves (4 shapes, 2 keyframes) ---------- */
 .ambient{position:fixed;inset:0;z-index:-1;overflow:hidden;background:linear-gradient(165deg,#efc3cb 0%,#dcb3cf 48%,#f0d6df 100%)}
 .wave{position:absolute;filter:blur(10px);opacity:.95;will-change:transform,border-radius;box-shadow:inset 0 40px 80px rgba(255,255,255,.4),0 40px 90px rgba(110,70,150,.22)}
 .wave.w1{border-radius:62% 38% 55% 45%/55% 45% 58% 42%;width:140vw;height:50vh;left:-25vw;top:-12vh;background:linear-gradient(100deg,#f9a9a2,#e0788f 55%,#e99ac0);animation:waveDriftOne 16s cubic-bezier(.45,.05,.35,.95) -3s infinite alternate}
@@ -36,19 +36,19 @@ a{color:inherit}
 }
 .no-waves .wave{animation-play-state:paused}
 
-
+/* ---------- layout shell ---------- */
 .container{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:18px;animation:pageIn .6s cubic-bezier(.2,.7,.2,1) both}
 .container>*{order:2}
 .container>.top-nav{order:0}
 .container>#reviewBanner{order:1}
 @keyframes pageIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
-
+/* ---------- glass surfaces ---------- */
 .card,.section,.top-nav{background:var(--glass);border:1px solid rgba(255,255,255,.6);backdrop-filter:blur(20px) saturate(1.15);-webkit-backdrop-filter:blur(20px) saturate(1.15);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.65);transition:transform .35s ease,box-shadow .35s ease}
 .card:hover,.section:hover{transform:translateY(-2px)}
 .section{border-radius:32px;padding:26px 28px}
 
-
+/* ---------- nav ---------- */
 .top-nav{display:flex;align-items:center;justify-content:space-between;gap:16px;border-radius:30px;padding:14px 20px}
 .top-nav:hover{transform:none}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none;font:600 21px var(--font-head);letter-spacing:-.03em}
@@ -63,7 +63,7 @@ a{color:inherit}
 .user-chip small{font-size:11px;color:var(--ink-3)}
 .avatar{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.8);font-size:12px;font-weight:700;color:var(--purple-d)}
 
-
+/* ---------- page head ---------- */
 .page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;padding:34px 4px 8px}
 .eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
 h1{font:500 clamp(38px,5.4vw,64px)/1.02 var(--font-head);letter-spacing:-.045em;color:var(--ink);margin-bottom:12px}
@@ -74,7 +74,7 @@ h1 i{display:none}
 .section h3 i{display:none}
 .flex-between{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
 
-
+/* ---------- buttons / pills ---------- */
 button{font:600 14px var(--font-body);color:var(--ink);cursor:pointer;border:1px solid rgba(255,255,255,.8);background:rgba(255,255,255,.5);padding:12px 20px;border-radius:16px;transition:transform .2s,box-shadow .2s,background .25s}
 button i{margin-right:8px}
 button:hover{transform:translateY(-1px);background:rgba(255,255,255,.72);box-shadow:0 8px 20px rgba(110,80,140,.14)}
@@ -95,7 +95,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 .icon-btn{width:36px;height:36px;padding:0;border-radius:12px;display:grid;place-items:center}
 .icon-btn i{margin:0}
 
-
+/* ---------- forms ---------- */
 input,select{font:500 14px var(--font-body);color:var(--ink);padding:13px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.8);background:rgba(255,255,255,.5);transition:background .25s,box-shadow .25s,border-color .25s;min-width:0}
 input::placeholder{color:var(--ink-3)}
 input:focus,select:focus{outline:none;background:rgba(255,255,255,.78);border-color:var(--purple);box-shadow:0 0 0 3px rgba(123,106,159,.2)}
@@ -114,7 +114,7 @@ input[type=file]::file-selector-button{font:600 13px var(--font-body);margin-rig
 .composer{animation:composerIn .38s cubic-bezier(.2,.8,.2,1) both}
 @keyframes composerIn{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
 
-
+/* ---------- stat cards ---------- */
 .summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .card{position:relative;overflow:hidden;border-radius:30px;padding:24px 26px 22px;text-align:left;min-height:162px}
 .stat-top{display:flex;align-items:center;gap:12px;margin-bottom:26px}
@@ -126,11 +126,11 @@ input[type=file]::file-selector-button{font:600 13px var(--font-body);margin-rig
 .blob{position:absolute;right:-26px;bottom:-34px;width:112px;height:112px;border-radius:50%;background:rgba(120,160,170,.4)}
 .card:nth-child(2) .blob{background:rgba(232,156,145,.4)}.card:nth-child(3) .blob{background:rgba(150,130,200,.35)}
 
-
+/* ---------- two-column grids ---------- */
 .grid-main{display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:stretch}
 .grid-main>.section{margin:0}
 
-
+/* ---------- dashboard: donut ---------- */
 .chart-breakdown{display:grid;grid-template-columns:230px 1fr;gap:40px;align-items:center;padding:8px 0}
 .chart-container{position:relative;width:220px;height:220px;margin:0 auto;padding:0}
 .chart-container canvas{width:100%!important;height:100%!important}
@@ -147,7 +147,7 @@ input[type=file]::file-selector-button{font:600 13px var(--font-body);margin-rig
 .breakdown-label .pct{grid-column:2;font-size:11.5px;font-weight:400;color:var(--ink-3)}
 .breakdown-amount{font-weight:700;font-size:14px}
 
-
+/* ---------- priority goal ---------- */
 .goal-card{display:flex;flex-direction:column;gap:6px}
 .goal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:34px}
 .goal-card .ico{background:rgba(255,255,255,.65);color:var(--ink-2);box-shadow:none;width:44px;height:44px}
@@ -161,7 +161,7 @@ input[type=file]::file-selector-button{font:600 13px var(--font-body);margin-rig
 .goal-meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-3);margin-bottom:18px}
 .goal-card .btn-soft{width:100%;margin-top:auto}
 
-
+/* ---------- transactions (restyles app.js inline markup) ---------- */
 .transaction-list{max-height:none;overflow:visible}
 .transaction-item{display:grid!important;grid-template-columns:48px minmax(0,1fr) auto auto 30px;grid-template-areas:"ic nm dt am dl" "ic ct dt am dl";column-gap:16px;row-gap:1px;align-items:center!important;padding:14px 2px!important;margin:0!important;background:none!important;backdrop-filter:none!important;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;transition:transform .25s}
 .transaction-item:last-child{border-bottom:0!important}
@@ -183,7 +183,7 @@ input[type=file]::file-selector-button{font:600 13px var(--font-body);margin-rig
 .empty-state i{display:block;font-size:34px;color:rgba(110,80,140,.2);margin-bottom:12px}
 #filterPendingBtn{background:rgba(255,255,255,.6)!important;color:var(--ink-2)!important;border:1px solid rgba(255,255,255,.8)!important;border-radius:12px!important;margin-left:auto!important}
 
-
+/* ---------- app.js banner / modal / toast ---------- */
 #reviewBanner{background:rgba(255,236,236,.62)!important;backdrop-filter:blur(18px)!important;border:1px solid rgba(255,255,255,.75)!important;border-radius:22px!important;padding:14px 22px!important;margin:0!important;color:var(--ink)!important;font-weight:500!important;font-size:14px}
 #reviewBanner button{background:linear-gradient(135deg,#746492,#5a4b78)!important;color:#fff!important;border-radius:14px!important;padding:9px 18px!important;font-size:13px!important}
 #reviewModal{background:rgba(80,55,105,.34)!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important;padding:20px}
@@ -204,12 +204,12 @@ input[type=file]::file-selector-button{font:600 13px var(--font-body);margin-rig
 #toast{border-radius:16px!important;background:rgba(251,243,248,.85)!important;color:var(--ink)!important;border:1px solid rgba(255,255,255,.9)!important;font-weight:600!important;font-size:14px;box-shadow:0 16px 40px rgba(90,60,120,.22)!important;animation:toastIn .45s cubic-bezier(.2,.8,.2,1) both!important}
 @keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
 
-
+/* ---------- goals section (dashboard) ---------- */
 #goalDisplay{margin-top:16px!important}
 #goalDisplay>div{background:rgba(255,255,255,.4)!important;border:1px solid rgba(255,255,255,.7)!important;border-radius:18px!important}
 #goalDisplay p{color:var(--ink)}#goalDisplay p[style]{color:var(--ink-3)!important}
 
-
+/* ---------- budget ---------- */
 .limit-row{display:grid;grid-template-columns:48px 170px minmax(120px,1fr) 124px 28px;gap:16px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}
 .limit-row:last-of-type{border-bottom:0}
 .limit-row .ico{width:44px;height:44px;border-radius:14px;box-shadow:none;background:rgba(150,130,200,.25);color:var(--purple-d)}
@@ -242,7 +242,7 @@ details.more summary{cursor:pointer;list-style:none;font-weight:600}
 details.more summary::-webkit-details-marker{display:none}
 details.more .form-row{margin-top:12px}
 
-
+/* ---------- debt ---------- */
 #debtList>div{background:none!important;border:0!important;border-radius:0!important;padding:0!important;margin:0!important;border-bottom:1px solid var(--line)!important;backdrop-filter:none!important}
 #debtList>div:last-child{border-bottom:0!important}
 #debtList>div>div{display:grid!important;grid-template-columns:48px minmax(0,1fr) minmax(90px,1.6fr) auto;gap:18px!important;align-items:center!important;padding:16px 0}
@@ -267,7 +267,7 @@ details.more .form-row{margin-top:12px}
 #debtSimulatorResult>div{margin-top:0!important;padding:14px!important;background:rgba(255,255,255,.4)!important;border-radius:16px!important}
 #debtSimulatorResult p[style]{color:var(--ink-2)!important;font-size:12.5px!important}
 
-
+/* ---------- reports ---------- */
 .rep-bar{display:flex;gap:12px;align-items:center}
 .note-card{display:grid;grid-template-columns:1fr 230px;gap:40px;align-items:center;padding:42px 46px}
 .note-card .ico{width:44px;height:44px;margin-bottom:24px}
@@ -300,7 +300,7 @@ details.more .form-row{margin-top:12px}
 .hl .ico{width:42px;height:42px;border-radius:50%;background:rgba(120,180,150,.25);color:var(--green);box-shadow:none}
 .hl strong{display:block;font-size:14px}.hl small{font-size:12px;color:var(--ink-3)}
 
-
+/* ---------- settings ---------- */
 .settings-layout{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:start}
 .side{position:sticky;top:20px;padding:12px!important;border-radius:28px!important;display:flex;flex-direction:column;gap:2px}
 .side a{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-radius:16px;text-decoration:none;font-size:14px;font-weight:500;color:var(--ink-2);transition:background .25s}
@@ -336,12 +336,12 @@ details.more .form-row{margin-top:12px}
 .split{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
 .split p{font-size:13px;color:var(--ink-2);margin-top:6px}
 
-
+/* ---------- footer ---------- */
 .site-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 8px 4px;font-size:11.5px;color:var(--ink-2)}
 .site-foot a{font-weight:600;text-decoration:none}
 ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.55);border-radius:10px}
 
-
+/* ---------- responsive ---------- */
 @media(max-width:1020px){
   .grid-main,.settings-layout,.note-card{grid-template-columns:1fr}
   .side{position:static;flex-direction:row;overflow-x:auto}.side a{white-space:nowrap}
@@ -369,7 +369,7 @@ details.more .form-row{margin-top:12px}
 .ms-menu button.on{background:rgba(123,106,159,.2);font-weight:600}
 .ms-menu small{font-size:11px;font-weight:400;color:var(--ink-3)}
 
-
+/* ---------- savings goals ---------- */
 .goal-card>.btn-soft{width:100%;margin-top:auto}
 .goal-item{padding:20px 0;border-bottom:1px solid var(--line)}
 .goal-item:first-child{padding-top:4px}.goal-item:last-child{border-bottom:0;padding-bottom:4px}
@@ -383,7 +383,7 @@ details.more .form-row{margin-top:12px}
 .goal-card .goal-add{margin-top:16px}.goal-card .goal-meta{margin-bottom:6px}
 .goal-card .goal-links{justify-content:space-between;gap:8px}
 
-
+/* ---------- month switcher (frame + buttons) ---------- */
 .month-switch{position:relative;display:inline-flex;align-items:center;gap:4px;padding:5px;border-radius:18px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.75)}
 .ms-btn{width:34px;height:34px;padding:0;border:0;border-radius:12px;background:none;box-shadow:none;color:var(--ink-2)}
 .ms-btn i{margin:0;font-size:11px}
@@ -397,7 +397,7 @@ details.more .form-row{margin-top:12px}
 .ms-all.on{background:var(--purple);color:#fff}
 .pill:empty{display:none}
 
-
+/* ---------- notices, hints, how-it-works ---------- */
 .container>.notice{order:1}
 .notice{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:22px;background:var(--glass);border:1px solid rgba(255,255,255,.75);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:var(--shadow);animation:composerIn .4s cubic-bezier(.2,.8,.2,1) both}
 .notice .ico{width:34px;height:34px;border-radius:11px;font-size:13px;box-shadow:none}
@@ -408,21 +408,21 @@ details.more .form-row{margin-top:12px}
 details.more p.how{margin-top:10px;font-size:13px;line-height:1.65;color:var(--ink-2);max-width:780px}
 .calc-note{padding:0 8px}
 
-
+/* ---------- goal forms / links ---------- */
 .goal-form{display:flex;flex-direction:column;gap:10px;margin-top:18px}
 .goal-form input{width:100%}
 .goal-form .btn-primary{margin-top:4px}
 .goal-links{display:flex;justify-content:space-between;margin-top:10px}
 .goal-links button,.goal-links a{font-size:12.5px;text-decoration:none}
 
-
+/* ---------- budget: create-category panel ---------- */
 .cat-panel{padding:22px 24px}
 .cat-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:14px;align-items:end}
 .cat-grid label{display:block;font-size:11px;font-weight:600;color:var(--ink-2);margin-bottom:7px}
 .cat-grid input{width:100%}
 .cat-grid .btn-primary{padding:13px 22px}
 
-
+/* ---------- debt: payments + what-if ---------- */
 .pay-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
 .pay-row:last-child{border:0}
 .pay-row .ico{width:40px;height:40px;border-radius:50%;background:rgba(120,180,150,.28);color:var(--green);box-shadow:none}
@@ -432,7 +432,7 @@ details.more p.how{margin-top:10px;font-size:13px;line-height:1.65;color:var(--i
 .whatif b{color:var(--ink)}
 .coach input[type=number],.coach input[type=date]{width:100%}
 
-
+/* ---------- report ring states / onboarding chips ---------- */
 .score.loading{animation:ringPulse 1.4s ease-in-out infinite}
 @keyframes ringPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
 .chips-mini{display:flex;gap:8px;flex-wrap:wrap}
@@ -440,7 +440,7 @@ details.more p.how{margin-top:10px;font-size:13px;line-height:1.65;color:var(--i
 .chips-mini .warn{background:rgba(232,156,145,.38);color:#8f3f3a}
 @media(max-width:720px){.cat-grid{grid-template-columns:1fr}.ms-label{min-width:120px}}
 
-
+/* ---------- budget: removed rows + collapsible goals ---------- */
 .limit-row[hidden]{display:none!important}
 .removed-rows{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink-3)}
 .chip-add{padding:7px 14px;border-radius:99px;font-size:12.5px;background:rgba(255,255,255,.6)}
@@ -455,7 +455,7 @@ details.more p.how{margin-top:10px;font-size:13px;line-height:1.65;color:var(--i
 .goal-summary{font-size:14px;color:var(--ink-2);padding:10px 2px}
 
 
-
+/* ==================== v6: nav badge, hamburger, dialogs ==================== */
 .nav-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--coral);color:#fff;font-size:10px;font-weight:700;margin-left:6px;line-height:1}
 .nav-badge[hidden]{display:none}
 .nav-toggle{display:none;width:44px;height:44px;padding:0;border-radius:14px;place-items:center;flex:none}
@@ -472,13 +472,13 @@ details.more p.how{margin-top:10px;font-size:13px;line-height:1.65;color:var(--i
 .btn-danger-solid:hover{background:linear-gradient(135deg,#cf6a64,#b3463f);color:#fff}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
-
+/* ---------- collapsible sections ---------- */
 .foldable.is-folded .fold-body{display:none}
 .foldable.is-folded .flex-between{margin-bottom:0}
 .fold-count{white-space:nowrap}
 .goal-tools .link-danger{white-space:nowrap}
 
-
+/* ---------- transaction icons per category / merchant ---------- */
 .transaction-item>span:nth-child(2){white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}
 .transaction-item[data-ic="cart"]::before{content:"\f07a"}.transaction-item[data-ic="food"]::before{content:"\f2e7"}
 .transaction-item[data-ic="fuel"]::before{content:"\f52f"}.transaction-item[data-ic="car"]::before{content:"\f1b9"}
@@ -494,7 +494,7 @@ details.more p.how{margin-top:10px;font-size:13px;line-height:1.65;color:var(--i
 .transaction-item[data-cat="Financial"]::before{color:#5a6fa6;background:rgba(140,160,210,.32)}
 .transaction-item[data-cat="Income"]::before{color:var(--green);background:rgba(120,180,150,.3)}
 
-
+/* ---------- colour pickers ---------- */
 input[type=color]{padding:3px;width:52px;height:46px;min-width:0;flex:none;border-radius:14px;cursor:pointer}
 input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
 input[type=color]::-webkit-color-swatch{border:0;border-radius:10px}
@@ -504,7 +504,7 @@ input[type=color]::-moz-color-swatch{border:0;border-radius:10px}
 .dot-pick::-moz-color-swatch{border:2px solid rgba(255,255,255,.9);border-radius:50%}
 #payoffEstimate{font-size:clamp(22px,2.3vw,32px)}
 
-
+/* ---------- upcoming plans (events) ---------- */
 .event-item .ev-tip{font-size:13px;color:var(--ink-2);margin:12px 0 4px;line-height:1.5}
 .ev-tip.over{color:var(--red)}
 .event-item .track>i.over{background:var(--red)}
@@ -512,7 +512,7 @@ input[type=color]::-moz-color-swatch{border:0;border-radius:10px}
 .ev-add{grid-template-columns:1fr 150px auto}
 .event-item .pay-row{padding:10px 0}
 
-
+/* ---------- mini stat rows (notifications + privacy) ---------- */
 .mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .mini-stats.five{grid-template-columns:repeat(5,1fr);gap:14px}
 .mini-stats .card{min-height:0;padding:20px 22px}
@@ -520,7 +520,7 @@ input[type=color]::-moz-color-swatch{border:0;border-radius:10px}
 .mini-stats.five .stat-top h3{font-size:12.5px}
 .card .amount.sm{font-size:22px;letter-spacing:-.03em}
 
-
+/* ---------- notifications page ---------- */
 .nf-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
 .nf-filters button{padding:8px 16px;border-radius:99px;font-size:12.5px;background:rgba(255,255,255,.55)}
 .nf-filters button.on{background:var(--purple);color:#fff;border-color:transparent}
@@ -551,7 +551,7 @@ input[type=color]::-moz-color-swatch{border:0;border-radius:10px}
 .promise{display:flex;flex-direction:column}.promise h3{margin:4px 0 8px}.promise .sub{font-size:13px;color:var(--ink-2);line-height:1.55}
 .promise-list{list-style:none;padding:0;margin:18px 0 22px;display:flex;flex-direction:column;gap:12px;font-size:13px}.promise-list i{width:22px;color:var(--ink-2)}
 
-
+/* ---------- privacy page ---------- */
 .perm-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .perm{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.7)}
 .perm .ico{width:40px;height:40px;border-radius:13px;background:rgba(255,255,255,.7);color:var(--ink-2);box-shadow:none;flex:none}
@@ -562,7 +562,7 @@ input[type=color]::-moz-color-swatch{border:0;border-radius:10px}
 .data-row:last-child{border:0}.data-row strong{display:block;font-size:14px}.data-row small{font-size:12.5px;color:var(--ink-3)}
 .data-row.danger strong{color:var(--red)}
 
-
+/* ==================== v6 responsive (hamburger + mobile) ==================== */
 @media(min-width:721px){.cat-grid{grid-template-columns:1fr 1fr 74px auto}}
 @media(max-width:1200px){.mini-stats.five{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:1100px){.user-chip>span:first-child{display:none}}
@@ -596,15 +596,20 @@ input[type=color]::-moz-color-swatch{border:0;border-radius:10px}
   .section h3{font-size:20px}
 }
 
-
+/* v6: pages with an inline two-column grid must still stack on tablets and phones */
 @media(max-width:1020px){.grid-main{grid-template-columns:minmax(0,1fr)!important}.grid-main>*{min-width:0}}
 @media(max-width:1020px){.nav-links{background:rgba(251,243,248,.985)!important}}
 
-
+/* v6.1 – mobile menu must sit above banners/cards */
 .top-nav{position:relative;z-index:60}
 .top-nav .nav-links{z-index:70}
 @media (max-width:1020px){.top-nav.is-open,.top-nav{z-index:80}}
 
-
+/* v7 – keep Fin's dismiss button clear of the card actions */
 .fin-card .fin-acts{margin-right:38px}
 @media (max-width:900px){.fin-card .fin-acts{margin-right:0}.fin-card .fin-copy{padding-right:34px}}
+
+/* v8: account security */
+.acct-line{color:var(--ink-2);font-size:14px;line-height:1.55;margin-top:6px}.acct-line strong{color:var(--ink)}.acct-line.sm{font-size:12.5px;color:var(--ink-3)}
+.acct-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.acct-actions a.btn-soft{text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.acct-msg{margin-left:12px;font-size:13px;color:var(--green)}.acct-msg.bad{color:var(--red)}

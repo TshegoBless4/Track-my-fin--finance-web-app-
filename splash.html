@@ -32,7 +32,8 @@
         var T_FADE = reduce ? 1000 : 4550, T_END = reduce ? 1400 : 5200, gone = false;
         try { sessionStorage.setItem('tmf_splash', '1'); } catch (e) {}
         var onboarded = false; try { onboarded = !!localStorage.getItem('trackmyfin_onboarded'); } catch (e) {}
-        var dest = onboarded ? 'index.html' : 'onboarding.html?from=splash';
+        var signedIn = false; try { var ss = JSON.parse(sessionStorage.getItem('tmf_session') || localStorage.getItem('tmf_session') || 'null'); signedIn = !!(ss && JSON.parse(localStorage.getItem('tmf_accounts') || '{}')[ss.id] && localStorage.getItem('tmf_active') === ss.id); } catch (e) {}
+        var dest = !signedIn ? 'account.html' : onboarded ? 'index.html' : 'onboarding.html?from=splash';
         function leave(ms) {
             if (gone) return; gone = true;
             document.body.classList.add('leaving');

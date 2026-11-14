@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Track My Fin - Dashboard</title>
-    <script>try{if(!sessionStorage.getItem('tmf_splash'))location.replace('splash.html');else if(!localStorage.getItem('trackmyfin_onboarded'))location.replace('onboarding.html');}catch(e){}</script>
+    <script src="auth.js?v=8"></script>
+    <script>try{if(window.__tmfGated){}else if(!sessionStorage.getItem('tmf_splash'))location.replace('splash.html');else if(!localStorage.getItem('trackmyfin_onboarded'))location.replace('onboarding.html');}catch(e){}</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=8">
     <link rel="stylesheet" href="fin-companion.css?v=7">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>

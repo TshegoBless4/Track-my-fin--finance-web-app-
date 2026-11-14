@@ -73,7 +73,7 @@
   $('delAccount').addEventListener('click', function () {
     askDelete('Delete your account?', 'Everything Track My Fin stores in this browser will be permanently deleted:', summary().concat(['Your profile, categories, rules and preferences', 'Fin conversations and notifications']), 'Delete everything').then(function (ok) {
       if (!ok) return; keys().forEach(function (k) { localStorage.removeItem(k); }); ['tmf_fin_seen', 'tmf_fin_chat'].forEach(function (k) { localStorage.removeItem(k); try { sessionStorage.removeItem(k); } catch (e) {} });
-      try { sessionStorage.clear(); } catch (e) {} keepSamplesOff(); location.href = 'index.html';
+      try { sessionStorage.clear(); } catch (e) {} keepSamplesOff(); if (window.TMFAuth) TMFAuth.deleteAccountRecord(); location.href = window.TMFAuth ? 'account.html' : 'index.html';
     });
   });
   render();

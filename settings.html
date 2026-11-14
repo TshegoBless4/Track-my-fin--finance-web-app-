@@ -8,8 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=8">
     <link rel="stylesheet" href="fin-companion.css?v=7">
+    <script src="auth.js?v=8"></script>
 </head>
 <body>
     <div class="ambient" aria-hidden="true"><span class="wave w1"></span><span class="wave w2"></span><span class="wave w3"></span><span class="wave w4"></span></div>
@@ -40,6 +41,7 @@
         <div class="settings-layout">
             <nav class="section side" aria-label="Settings sections">
                 <a href="#profile" class="active">Profile <i class="fas fa-chevron-right"></i></a>
+                <a href="#account">Account security <i class="fas fa-chevron-right"></i></a>
                 <a href="#categories">Categories <i class="fas fa-chevron-right"></i></a>
                 <a href="#notifications">Notifications <i class="fas fa-chevron-right"></i></a>
                 <a href="#appearance">Appearance <i class="fas fa-chevron-right"></i></a>
@@ -60,6 +62,24 @@
                     <button class="btn-primary" id="saveProfileBtn" onclick="saveProfile()" style="margin-top:22px">Save changes</button>
                     <div id="profileStatus" role="status" style="margin-top:10px"></div>
                     <div id="profileDisplay" hidden></div>
+                </section>
+
+                <section class="section" id="account">
+                    <p class="eyebrow">Account security</p><h3 style="margin-bottom:6px">Your sign-in</h3>
+                    <div id="acctSec">
+                        <p class="acct-line">Signed in as <strong id="acctName"></strong> &middot; <span id="acctEmail"></span></p>
+                        <p class="acct-line sm">Account created <span id="acctSince">on this device</span>. Your password is stored only as a scrambled hash in this browser.</p>
+                        <div class="acct-actions">
+                            <a class="btn-soft" id="acctPreview" href="account.html?preview=1"><i class="fas fa-eye"></i> Preview sign in</a>
+                            <button class="btn-soft" type="button" id="pwToggle"><i class="fas fa-key"></i> Change password</button>
+                            <button class="btn-soft" type="button" id="acctOut"><i class="fas fa-right-from-bracket"></i> Sign out</button>
+                        </div>
+                        <form id="pwForm" hidden class="fields" style="margin-top:18px">
+                            <div><label for="pwOld">Current password</label><input type="password" id="pwOld" autocomplete="current-password" required></div>
+                            <div><label for="pwNew">New password</label><input type="password" id="pwNew" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required></div>
+                            <div class="full"><button class="btn-primary" type="submit">Update password</button><span class="acct-msg" id="pwMsg" role="status"></span></div>
+                        </form>
+                    </div>
                 </section>
 
                 <section class="section" id="categories">

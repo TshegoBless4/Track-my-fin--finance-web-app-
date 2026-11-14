@@ -66,7 +66,9 @@
       goals: goals().map(function (g) { return { name: g.name, target: g.target, saved: g.saved || 0 }; }),
       debts: (read('trackmyfin_debts', []) || []).map(function (d) { return { name: d.name, balance: d.balance, ratePercent: d.rate || 0, paidSoFar: pays.filter(function (x) { return x.debtId === d.id; }).reduce(function (s, x) { return s + x.amount; }, 0) }; }),
       debtMonthlyBudget: parseFloat(read('trackmyfin_debt_budget', 0)) || 0,
-      debtTargetDate: read('trackmyfin_debt_target', '') || ''
+      debtTargetDate: read('trackmyfin_debt_target', '') || '',
+      statedMonthlyIncome: prof.income > 0 ? Math.round(prof.income) : 0,
+      mainGoal: prof.goal && prof.goal !== 'Not specified' ? String(prof.goal).slice(0, 80) : ''
     };
   }
   function pace() {                       // category most likely to overshoot at the current pace
@@ -86,6 +88,8 @@
     if (!ok('transactions')) { delete c.income; delete c.spending; delete c.available; delete c.largestExpenses; c.categories = c.categories.map(function (x) { return { name: x.name, monthlyLimit: x.monthlyLimit }; }); }
     if (!ok('budgets')) c.categories = c.categories.map(function (x) { return { name: x.name, spent: x.spent }; });
     else c.events = (read('trackmyfin_events', []) || []).map(function (e) { return { name: e.name, date: e.date, budget: e.budget, spent: (e.items || []).reduce(function (s, x) { return s + x.amount; }, 0) }; });
+    if (!ok('transactions')) delete c.statedMonthlyIncome;   // income is a financial figure: same switch as transactions
+    if (!ok('goals')) delete c.mainGoal;
     if (!ok('debts')) { c.debts = []; delete c.debtMonthlyBudget; delete c.debtTargetDate; }
     if (!ok('goals')) c.goals = [];
     c.allowedAreas = Object.keys(AREA_LABEL).filter(ok);
@@ -116,6 +120,10 @@
   /* ---------------- offline answers (used when the AI server is unreachable) ---------------- */
   function localAnswer(q) {
     var c = ctxFull(), t = q.toLowerCase(), g = topGoal(), ps = pace();
+    if (!c.income && c.statedMonthlyIncome > 0 && /50.?30|split|plan|budget|how much.*(save|spend)|save|afford/.test(t)) {
+      var inc = c.statedMonthlyIncome;
+      return 'You told me you bring in about ' + money(inc) + ' a month, and I can\u2019t see any recorded transactions yet. As a starting guide (a suggestion, not your data): about ' + money(inc * 0.5) + ' for essentials, ' + money(inc * 0.3) + ' for lifestyle and ' + money(inc * 0.2) + ' toward savings or debt.' + (c.mainGoal ? ' Since your main goal is \u201C' + c.mainGoal + '\u201D, the last part is where I\u2019d start.' : '') + ' Add a few transactions and I\u2019ll use your real numbers.';
+    }
     var cats = c.categories.filter(function (x) { return x.monthlyLimit > 0; }).map(function (x) { return { n: x.name, pct: x.spent / x.monthlyLimit * 100, s: x.spent, l: x.monthlyLimit }; }).sort(function (a, b) { return b.pct - a.pct; });
     if (/overspen|rebalanc|too much|reduce|cut/.test(t)) {
       if (!cats.length) return 'I can\u2019t see any category limits yet. Set a monthly limit for each category on the Budget page and I\u2019ll show you where you\u2019re drifting.';
@@ -207,7 +215,7 @@
       '<button class="icon-btn" id="finClear" aria-label="Start a new conversation" title="New conversation"><i class="fas fa-rotate-right"></i></button>' +
       '<button class="icon-btn" id="finClose" aria-label="Close Fin"><i class="fas fa-xmark"></i></button></header>' +
       '<div class="fin-ctx"><span><i class="fas fa-wand-magic-sparkles"></i> Fin is looking at your ' + LABEL + ' picture</span><button class="link-soft" id="finWhat">What can Fin see?</button></div>' +
-      '<p class="fin-see" id="finSee" hidden>Fin can use your recorded income and spending, budget limits, savings goals and debts. Nothing leaves your browser until you send Fin a message, and then only the figures needed to answer.</p>' +
+      '<p class="fin-see" id="finSee" hidden>Fin can use your recorded income and spending, the monthly income and goal from your profile, budget limits, savings goals and debts. Nothing leaves your browser until you send Fin a message, and then only the figures needed to answer.</p>' +
       '<div class="fin-msgs" id="finMsgs" aria-live="polite"></div>' +
       '<div class="fin-chips" id="finChips"></div>' +
       '<form class="fin-form" id="finForm"><input type="text" id="finInput" placeholder="Ask Fin anything\u2026" autocomplete="off" aria-label="Ask Fin anything"><button class="btn-primary" aria-label="Send"><i class="fas fa-arrow-up"></i></button></form>' +
