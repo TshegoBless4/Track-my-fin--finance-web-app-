@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=5">
-    <link rel="stylesheet" href="fin-companion.css?v=5">
+    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="fin-companion.css?v=7">
 </head>
 <body>
     <div class="ambient" aria-hidden="true"><span class="wave w1"></span><span class="wave w2"></span><span class="wave w3"></span><span class="wave w4"></span></div>
@@ -17,14 +17,16 @@
 
         <nav class="top-nav" aria-label="Main navigation">
             <a class="brand" href="index.html"><span class="logo"><i class="fas fa-wand-magic-sparkles"></i></span>Track My Fin</a>
-            <div class="nav-links">
+            <div class="nav-links" id="navLinks">
                 <a href="index.html"><i class="fas fa-table-cells-large"></i> Overview</a>
                 <a href="budget.html" class="active" aria-current="page"><i class="fas fa-wallet"></i> Budget</a>
                 <a href="debt.html"><i class="fas fa-credit-card"></i> Debt</a>
                 <a href="reports.html"><i class="fas fa-arrow-trend-up"></i> Reports</a>
+                <a href="notifications.html"><i class="fas fa-bell"></i> Notifications <span class="nav-badge" data-nav-badge hidden>0</span></a>
                 <a href="settings.html"><i class="fas fa-bullseye"></i> Settings</a>
             </div>
             <a class="user-chip" href="settings.html" aria-label="Your profile"><span><strong id="navName">Welcome</strong><small>Personal account</small></span><span class="avatar" id="navAvatar">TM</span></a>
+            <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"><i class="fas fa-bars"></i></button>
         </nav>
 
         <header class="page-head">
@@ -51,6 +53,7 @@
             <div class="cat-grid">
                 <div><label for="newCategoryName">Category name</label><input type="text" id="newCategoryName" placeholder="e.g. Wellness"></div>
                 <div><label for="newCategoryLimit">Monthly limit</label><input type="number" id="newCategoryLimit" min="0" placeholder="R 0"></div>
+                <div><label for="newCategoryColor">Colour</label><input type="color" id="newCategoryColor" value="#7b6a9f" title="Pick any colour" aria-label="Category colour"></div>
                 <button class="btn-primary" id="addCatBtn">Add category</button>
             </div>
         </section>
@@ -108,10 +111,16 @@
             </section>
         </div>
 
+        <section class="section foldable" id="events" data-fold="events">
+            <div class="flex-between"><div><p class="eyebrow">Upcoming plans</p><h3>Budget for what&rsquo;s coming</h3></div><div class="goal-tools"><span class="pill sm fold-count"></span><button class="btn-soft" data-act="new"><i class="fas fa-plus"></i> New plan</button><button class="icon-btn fold-btn" aria-expanded="true" aria-label="Collapse upcoming plans"><i class="fas fa-chevron-up"></i></button></div></div>
+            <div class="fold-body"><p class="note" style="margin:-6px 0 8px">A birthday, a trip, a wedding: give it a date and a budget, and track what you spend on it.</p><div id="eventList"></div></div>
+        </section>
+
         <footer class="site-foot"><span>Track My Fin keeps your financial picture beautifully simple.</span><span id="dataStamp">Data updated just now</span></footer>
     </div>
-    <script src="ui.js?v=5"></script>
+    <script src="ui.js?v=7"></script>
     <script src="app.js"></script>
-    <script src="fin-companion.js?v=5"></script>
+    <script src="extras.js?v=7"></script>
+    <script src="fin-companion.js?v=7"></script>
 </body>
 </html>

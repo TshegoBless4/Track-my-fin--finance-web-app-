@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=5">
-    <link rel="stylesheet" href="fin-companion.css?v=5">
+    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="fin-companion.css?v=7">
 </head>
 <body>
     <div class="ambient" aria-hidden="true"><span class="wave w1"></span><span class="wave w2"></span><span class="wave w3"></span><span class="wave w4"></span></div>
@@ -17,14 +17,16 @@
 
         <nav class="top-nav" aria-label="Main navigation">
             <a class="brand" href="index.html"><span class="logo"><i class="fas fa-wand-magic-sparkles"></i></span>Track My Fin</a>
-            <div class="nav-links">
+            <div class="nav-links" id="navLinks">
                 <a href="index.html"><i class="fas fa-table-cells-large"></i> Overview</a>
                 <a href="budget.html"><i class="fas fa-wallet"></i> Budget</a>
                 <a href="debt.html"><i class="fas fa-credit-card"></i> Debt</a>
                 <a href="reports.html"><i class="fas fa-arrow-trend-up"></i> Reports</a>
+                <a href="notifications.html"><i class="fas fa-bell"></i> Notifications <span class="nav-badge" data-nav-badge hidden>0</span></a>
                 <a href="settings.html" class="active" aria-current="page"><i class="fas fa-bullseye"></i> Settings</a>
             </div>
             <a class="user-chip" href="settings.html" aria-label="Your profile"><span><strong id="navName">Welcome</strong><small>Personal account</small></span><span class="avatar" id="navAvatar">TM</span></a>
+            <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"><i class="fas fa-bars"></i></button>
         </nav>
 
         <header class="page-head">
@@ -41,7 +43,8 @@
                 <a href="#categories">Categories <i class="fas fa-chevron-right"></i></a>
                 <a href="#notifications">Notifications <i class="fas fa-chevron-right"></i></a>
                 <a href="#appearance">Appearance <i class="fas fa-chevron-right"></i></a>
-                <a href="#data">Data &amp; privacy <i class="fas fa-chevron-right"></i></a>
+                <a href="privacy.html">Privacy &amp; Fin <i class="fas fa-chevron-right"></i></a>
+                <a href="privacy.html#data">Data &amp; privacy <i class="fas fa-chevron-right"></i></a>
             </nav>
 
             <div class="stack">
@@ -63,7 +66,7 @@
                     <p class="eyebrow">Custom categories</p><h3 style="margin-bottom:18px">Make categories your own</h3>
                     <div class="form-row">
                         <input type="text" id="newCategoryName" placeholder="Category name" aria-label="New category name" style="flex:1">
-                        <select id="categoryColor" aria-label="Category color"><option value="#6058a3">Purple</option><option value="#b271af">Pink</option><option value="#7aa2c6">Blue</option><option value="#6a8a6a">Green</option><option value="#e6b85c">Gold</option></select>
+                        <input type="color" id="categoryColor" value="#6058a3" title="Pick any colour" aria-label="Category colour">
                         <button class="btn-soft" onclick="addCustomCategory()">Add category</button>
                     </div>
                     <div id="customCategoryList"></div>
@@ -85,6 +88,13 @@
                     <div class="toggle-row"><div><strong>Budget alerts</strong><small>When a category reaches 80%</small></div><label class="toggle"><input type="checkbox" id="nBudget" aria-label="Budget alerts"><span></span></label></div>
                     <div class="toggle-row"><div><strong>Goal milestones</strong><small>Celebrate meaningful progress</small></div><label class="toggle"><input type="checkbox" id="nGoal" aria-label="Goal milestones"><span></span></label></div>
                     <p class="note">These appear inside Track My Fin when you open it &mdash; a weekly check-in each Sunday (or your first visit after a week away), budget alerts at 80% and 100% of a limit, and goal milestones at 25, 50, 75 and 100%. They are not sent to your phone or email.</p>
+                </section>
+
+                <section class="section" id="privacy-card">
+                    <div class="split">
+                        <div><p class="eyebrow">Privacy &amp; Fin</p><h3>You control what Fin can understand</h3><p>Choose which parts of your finances Fin may use, download your data, or delete it.</p></div>
+                        <a class="btn-primary pill" href="privacy.html" style="text-decoration:none;color:#fff">Open privacy centre</a>
+                    </div>
                 </section>
 
                 <section class="section" id="data">
@@ -112,9 +122,10 @@
 
         <footer class="site-foot"><span>Track My Fin keeps your financial picture beautifully simple.</span><span id="dataStamp">Data updated just now</span></footer>
     </div>
-    <script src="ui.js?v=5"></script>
+    <script src="ui.js?v=7"></script>
     <script src="app.js"></script>
-    <script src="fin-companion.js?v=5"></script>
+    <script src="extras.js?v=7"></script>
+    <script src="fin-companion.js?v=7"></script>
     <script>
         loadProfile();
         displayCustomCategories();

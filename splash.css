@@ -1,4 +1,4 @@
-/* Splash — ambient wave reveal (5.2s; fade-out begins at 4.55s) */
+
 @view-transition {
   navigation: auto;
 }
@@ -303,7 +303,7 @@ body {
   }
 }
 
-/* hand-off into onboarding */
+
 .leaving .sp-stage {
   opacity: 0;
   transform: translateY(-16px) scale(0.98);

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track My Fin - Notifications</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="fin-companion.css?v=7">
+</head>
+<body>
+    <div class="ambient" aria-hidden="true"><span class="wave w1"></span><span class="wave w2"></span><span class="wave w3"></span><span class="wave w4"></span></div>
+    <div class="container">
+
+        <nav class="top-nav" aria-label="Main navigation">
+            <a class="brand" href="index.html"><span class="logo"><i class="fas fa-wand-magic-sparkles"></i></span>Track My Fin</a>
+            <div class="nav-links" id="navLinks">
+                <a href="index.html"><i class="fas fa-table-cells-large"></i> Overview</a>
+                <a href="budget.html"><i class="fas fa-wallet"></i> Budget</a>
+                <a href="debt.html"><i class="fas fa-credit-card"></i> Debt</a>
+                <a href="reports.html"><i class="fas fa-arrow-trend-up"></i> Reports</a>
+                <a href="notifications.html" class="active" aria-current="page"><i class="fas fa-bell"></i> Notifications <span class="nav-badge" data-nav-badge hidden>0</span></a>
+                <a href="settings.html"><i class="fas fa-bullseye"></i> Settings</a>
+            </div>
+            <a class="user-chip" href="settings.html" aria-label="Your profile"><span><strong id="navName">Welcome</strong><small>Personal account</small></span><span class="avatar" id="navAvatar">TM</span></a>
+            <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"><i class="fas fa-bars"></i></button>
+        </nav>
+
+        <header class="page-head">
+            <div><p class="eyebrow">Your money feed</p><h1>Stay informed, not overwhelmed.</h1><p class="subtitle">Important changes, gentle reminders, and insights from Fin&mdash;all in one calm place.</p></div>
+            <div class="head-actions"><button class="btn-soft" id="markAll">Mark all as read</button><a class="btn-primary pill" href="settings.html#notifications" style="text-decoration:none;color:#fff">Preferences</a></div>
+        </header>
+
+        <div class="mini-stats">
+            <div class="card"><div class="stat-top"><span class="ico"><i class="far fa-bell"></i></span><h3>Unread</h3></div><div class="amount" id="nUnread">0</div><p class="delta">Requiring your attention</p></div>
+            <div class="card"><div class="stat-top"><span class="ico"><i class="far fa-calendar"></i></span><h3>Upcoming</h3></div><div class="amount" id="nUpcoming">0</div><p class="delta">Payments and plans in the next 14 days</p></div>
+            <div class="card"><div class="stat-top"><span class="ico"><i class="fas fa-wand-magic-sparkles"></i></span><h3>Fin insights</h3></div><div class="amount" id="nFin">0</div><p class="delta">New patterns worth seeing</p></div>
+        </div>
+
+        <div class="grid-main" style="grid-template-columns:2fr 1fr">
+            <section class="section">
+                <div class="flex-between"><div><p class="eyebrow">Activity</p><h3>Notifications</h3></div><div class="goal-tools"><span class="pill sm" id="nCount">0 updates</span><button class="link-soft" id="nFoldAll">Collapse all</button></div></div>
+                <div class="nf-filters" id="nFilters" role="tablist" aria-label="Filter notifications"></div>
+                <div id="nList"></div>
+            </section>
+            <aside class="section promise">
+                <span class="fin-av lg"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M32 10v6"/><circle cx="32" cy="7.5" r="2.4" fill="currentColor" stroke="none"/><rect x="13" y="17" width="38" height="31" rx="14"/><path d="M9.5 30v6M54.5 30v6"/><g class="fin-eyes"><ellipse class="fin-eye" cx="25" cy="31" rx="2.6" ry="3.3" fill="currentColor" stroke="none"/><ellipse class="fin-eye" cx="39" cy="31" rx="2.6" ry="3.3" fill="currentColor" stroke="none"/></g><path d="M26 40c3.2 3 8.8 3 12 0"/></svg></span>
+                <p class="eyebrow" style="margin-top:22px">Fin&rsquo;s notification promise</p>
+                <h3>Useful, explainable, and always in your control.</h3>
+                <p class="sub">Every Fin alert shows what changed, which figures were used, and where you can adjust access.</p>
+                <ul class="promise-list"><li><i class="fas fa-shield-halved"></i> No surprise access</li><li><i class="far fa-bell"></i> No noisy reminders</li><li><i class="fas fa-wand-magic-sparkles"></i> Clear next steps</li></ul>
+                <a class="btn-soft pill" href="privacy.html" style="text-decoration:none;justify-content:center;margin-top:auto;color:var(--ink)">Review Fin permissions</a>
+            </aside>
+        </div>
+        <footer class="site-foot"><span>Track My Fin keeps your financial picture beautifully simple.</span><span id="dataStamp">Data updated just now</span></footer>
+    </div>
+    <script src="ui.js?v=7"></script>
+    <script src="app.js"></script>
+    <script src="notifications.js?v=7"></script>
+    <script src="fin-companion.js?v=7"></script>
+</body>
+</html>

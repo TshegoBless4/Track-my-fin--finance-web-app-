@@ -1,7 +1,7 @@
 @view-transition {
   navigation: auto;
 }
-/* Onboarding guide — pairs with style.css (ambient waves, buttons, fonts) */
+
 body.ob {
   display: grid;
   place-items: center;

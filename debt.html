@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=5">
-    <link rel="stylesheet" href="fin-companion.css?v=5">
+    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="fin-companion.css?v=7">
 </head>
 <body>
     <div class="ambient" aria-hidden="true"><span class="wave w1"></span><span class="wave w2"></span><span class="wave w3"></span><span class="wave w4"></span></div>
@@ -17,14 +17,16 @@
 
         <nav class="top-nav" aria-label="Main navigation">
             <a class="brand" href="index.html"><span class="logo"><i class="fas fa-wand-magic-sparkles"></i></span>Track My Fin</a>
-            <div class="nav-links">
+            <div class="nav-links" id="navLinks">
                 <a href="index.html"><i class="fas fa-table-cells-large"></i> Overview</a>
                 <a href="budget.html"><i class="fas fa-wallet"></i> Budget</a>
                 <a href="debt.html" class="active" aria-current="page"><i class="fas fa-credit-card"></i> Debt</a>
                 <a href="reports.html"><i class="fas fa-arrow-trend-up"></i> Reports</a>
+                <a href="notifications.html"><i class="fas fa-bell"></i> Notifications <span class="nav-badge" data-nav-badge hidden>0</span></a>
                 <a href="settings.html"><i class="fas fa-bullseye"></i> Settings</a>
             </div>
             <a class="user-chip" href="settings.html" aria-label="Your profile"><span><strong id="navName">Welcome</strong><small>Personal account</small></span><span class="avatar" id="navAvatar">TM</span></a>
+            <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"><i class="fas fa-bars"></i></button>
         </nav>
 
         <header class="page-head">
@@ -59,6 +61,7 @@
                 <input type="date" id="payDate" aria-label="Date paid">
                 <button class="btn-primary" id="recordPayBtn"><i class="fas fa-check"></i> Record payment</button>
             </div>
+            <div class="form-row" style="margin-top:12px"><input type="number" id="dueDay" min="1" max="31" placeholder="Optional: payment due day of the month (1 to 31)"><button class="btn-soft" id="saveDueBtn">Save due day for this debt</button></div>
             <p class="note">Your balance drops by what you paid. Pay a debt off completely and it moves to your history.</p>
         </section>
 
@@ -69,9 +72,9 @@
         </div>
 
         <div class="grid-main">
-            <section class="section">
-                <div class="flex-between"><div><p class="eyebrow">Your balances</p><h3>Debt overview</h3></div><button class="link-danger" onclick="clearDebts()">Clear all</button></div>
-                <div id="debtList"><div class="empty-state"><i class="fas fa-inbox"></i> No debts added yet</div></div>
+            <section class="section foldable" data-fold="debtList">
+                <div class="flex-between"><div><p class="eyebrow">Your balances</p><h3>Debt overview</h3></div><div class="goal-tools"><span class="pill sm fold-count"></span><button class="link-danger" onclick="clearDebts()">Clear all</button><button class="icon-btn fold-btn" aria-expanded="true" aria-label="Collapse balances"><i class="fas fa-chevron-up"></i></button></div></div>
+                <div class="fold-body"><div id="debtList"><div class="empty-state"><i class="fas fa-inbox"></i> No debts added yet</div></div></div>
             </section>
             <aside class="section coach">
                 <span class="ico"><i class="fas fa-wand-magic-sparkles"></i></span>
@@ -93,16 +96,17 @@
             </aside>
         </div>
 
-        <section class="section">
-            <div class="flex-between"><div><p class="eyebrow">Payment history</p><h3>What you have paid off</h3></div><span class="pill sm" id="paidTotal" style="display:none"></span></div>
-            <div id="payHistory"></div>
+        <section class="section foldable" data-fold="payHistory">
+            <div class="flex-between"><div><p class="eyebrow">Payment history</p><h3>What you have paid off</h3></div><div class="goal-tools"><span class="pill sm" id="paidTotal"></span><span class="pill sm fold-count"></span><button class="link-danger" id="clearPayHistory">Clear history</button><button class="icon-btn fold-btn" aria-expanded="true" aria-label="Collapse payment history"><i class="fas fa-chevron-up"></i></button></div></div>
+            <div class="fold-body"><div id="payHistory"></div></div>
         </section>
 
         <footer class="site-foot"><span>Track My Fin keeps your financial picture beautifully simple.</span><span id="dataStamp">Data updated just now</span></footer>
     </div>
-    <script src="ui.js?v=5"></script>
+    <script src="ui.js?v=7"></script>
     <script src="app.js"></script>
-    <script src="fin-companion.js?v=5"></script>
+    <script src="extras.js?v=7"></script>
+    <script src="fin-companion.js?v=7"></script>
     <script>
         if (typeof displayDebts === 'function') displayDebts();
         if (typeof updateDebtSummary === 'function') updateDebtSummary();
